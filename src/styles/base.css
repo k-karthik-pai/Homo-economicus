@@ -1,0 +1,123 @@
+/* ============================================
+   BASE — Global Styles
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-normal);
+  line-height: var(--lh-normal);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  overflow: hidden;
+}
+
+/* App container */
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--accent-primary);
+  color: var(--text-on-accent);
+}
+
+::-moz-selection {
+  background-color: var(--accent-primary);
+  color: var(--text-on-accent);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: var(--border-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--text-heading);
+  line-height: var(--lh-tight);
+}
+
+/* Code */
+code, pre {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+pre {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--border-radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+}
+
+code {
+  background: var(--bg-tertiary);
+  padding: 0.15em 0.4em;
+  border-radius: var(--border-radius-sm);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Links in AI responses */
+.message-content a {
+  color: var(--accent-light);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.message-content a:hover {
+  color: var(--accent-primary);
+}
+
+/* Background ambient glow */
+.ambient-glow {
+  position: fixed;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.ambient-glow--bottom {
+  top: auto;
+  bottom: -300px;
+  opacity: 0.3;
+}

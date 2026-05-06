@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://homoeconomicus.app/sitemap.xml

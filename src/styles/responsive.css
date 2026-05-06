@@ -1,0 +1,89 @@
+/* ============================================
+   RESPONSIVE — Mobile-first Breakpoints
+   ============================================ */
+
+/* Tablet & below */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translateX(-100%);
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  .sidebar__toggle {
+    display: flex;
+  }
+
+  .chat {
+    padding: var(--space-6) var(--space-4);
+    padding-top: calc(var(--space-6) + 56px);
+  }
+
+  .input-area {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+
+  .welcome__title {
+    font-size: var(--fs-2xl);
+  }
+
+  .welcome__examples {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome {
+    padding: var(--space-6) var(--space-4);
+    padding-top: calc(var(--space-6) + 56px);
+  }
+
+  .message__body {
+    max-width: 90%;
+  }
+
+  .auth-modal {
+    margin: var(--space-4);
+    padding: var(--space-8) var(--space-6);
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .welcome__title {
+    font-size: var(--fs-xl);
+  }
+
+  .welcome__tagline {
+    font-size: var(--fs-base);
+  }
+
+  .welcome__icon {
+    width: 64px;
+    height: 64px;
+    font-size: 2rem;
+  }
+
+  .message__content {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .input-area__wrapper {
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  }
+
+  .sidebar {
+    width: 85vw;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1440px) {
+  :root {
+    --max-chat-width: 900px;
+  }
+}
