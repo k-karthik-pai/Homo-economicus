@@ -3,12 +3,13 @@
  */
 
 export class Sidebar {
-  constructor(chatEngine, { onNewChat, onSwitchChat, onDeleteChat, onAuthClick }) {
+  constructor(chatEngine, { onNewChat, onSwitchChat, onDeleteChat, onAuthClick, onApiClick }) {
     this.chatEngine = chatEngine;
     this.onNewChat = onNewChat;
     this.onSwitchChat = onSwitchChat;
     this.onDeleteChat = onDeleteChat;
     this.onAuthClick = onAuthClick;
+    this.onApiClick = onApiClick;
     this.isOpen = false;
   }
 
@@ -19,7 +20,9 @@ export class Sidebar {
 
     sidebar.innerHTML = `
       <div class="sidebar__brand">
-        <div class="sidebar__logo">⚖</div>
+        <div class="sidebar__logo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+        </div>
         <div>
           <div class="sidebar__title">Homo Economicus</div>
           <div class="sidebar__subtitle">Rational Decision Advisor</div>
@@ -35,6 +38,10 @@ export class Sidebar {
       <div class="sidebar__history" id="sidebar-history"></div>
 
       <div class="sidebar__footer">
+        <button class="sidebar__user-btn" id="btn-api-key" style="margin-bottom: var(--space-3);">
+          <div class="sidebar__user-avatar" style="background: var(--bg-tertiary); box-shadow: none;">🔑</div>
+          <span>API Key Settings</span>
+        </button>
         <button class="sidebar__user-btn" id="btn-user">
           <div class="sidebar__user-avatar" id="user-avatar">?</div>
           <span id="user-name">Sign In</span>
@@ -63,6 +70,10 @@ export class Sidebar {
 
     sidebar.querySelector('#btn-user').addEventListener('click', () => {
       this.onAuthClick();
+    });
+
+    sidebar.querySelector('#btn-api-key').addEventListener('click', () => {
+      if (this.onApiClick) this.onApiClick();
     });
 
     return { sidebar, toggle, overlay };

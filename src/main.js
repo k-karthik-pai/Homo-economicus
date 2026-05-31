@@ -28,6 +28,7 @@ import { Sidebar } from './components/Sidebar.js';
 import { InputArea } from './components/InputArea.js';
 import { WelcomeScreen } from './components/WelcomeScreen.js';
 import { AuthModal } from './components/AuthModal.js';
+import { ApiKeyModal } from './components/ApiKeyModal.js';
 
 // ---- Initialize Engine ----
 const chatEngine = new ChatEngine();
@@ -38,6 +39,11 @@ const sidebar = new Sidebar(chatEngine, {
   onSwitchChat: (id) => switchToChat(id),
   onDeleteChat: (id) => deleteChat(id),
   onAuthClick: () => handleAuthClick(),
+  onApiClick: () => {
+    new ApiKeyModal((key) => {
+      showToast('API Key saved! You can now use the AI.', 'success');
+    });
+  },
 });
 
 const inputArea = new InputArea({
@@ -64,14 +70,7 @@ function buildApp() {
   const app = document.getElementById('app');
   app.innerHTML = '';
 
-  // Ambient glow effects
-  const glowTop = document.createElement('div');
-  glowTop.className = 'ambient-glow';
-  app.appendChild(glowTop);
-
-  const glowBottom = document.createElement('div');
-  glowBottom.className = 'ambient-glow ambient-glow--bottom';
-  app.appendChild(glowBottom);
+  // Ambient glow effects removed for minimalist design
 
   // Sidebar
   const { sidebar: sidebarEl, toggle, overlay } = sidebar.render();
@@ -111,9 +110,9 @@ function buildApp() {
 
   // Check API key
   if (!isApiKeyConfigured()) {
-    setTimeout(() => {
-      showToast('⚠ Add your Gemini API key to .env to enable AI responses', 'error');
-    }, 1000);
+    const apiKeyModal = new ApiKeyModal((key) => {
+      showToast('API Key saved! You can now use the AI.', 'success');
+    });
   }
 
   // Focus input

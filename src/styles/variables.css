@@ -1,120 +1,72 @@
-/* ============================================
-   DESIGN TOKENS — Variables & Theme
-   ============================================ */
-
 :root {
-  /* ---- Colors ---- */
-  --bg-primary:       #08080F;
-  --bg-secondary:     #0F0F1A;
-  --bg-tertiary:      #161625;
-  --bg-glass:         rgba(255, 255, 255, 0.03);
-  --bg-glass-hover:   rgba(255, 255, 255, 0.06);
-  --bg-glass-active:  rgba(255, 255, 255, 0.08);
+  /* Minimal Dark Theme (ChatGPT / Claude Style) */
+  
+  /* Backgrounds */
+  --bg-primary: #212121;       /* Main chat area */
+  --bg-secondary: #171717;     /* Sidebar / Modals */
+  --bg-tertiary: #2f2f2f;      /* User message bubbles / Inputs */
+  --bg-hover: #3a3a3a;         /* Hover states */
 
-  /* Accent — Gold/Amber (intellect, authority, value) */
-  --accent-primary:   #C9A24E;
-  --accent-light:     #E0BC6A;
-  --accent-dark:      #A67C30;
-  --accent-glow:      rgba(201, 162, 78, 0.15);
-  --accent-glow-strong: rgba(201, 162, 78, 0.3);
-
-  /* Status */
-  --success:          #4ADE80;
-  --warning:          #FBBF24;
-  --error:            #F87171;
-  --info:             #60A5FA;
-
-  /* Text */
-  --text-primary:     #E8E6E3;
-  --text-secondary:   #7A7A8C;
-  --text-tertiary:    #4A4A5C;
-  --text-heading:     #FFFFFF;
-  --text-accent:      #C9A24E;
-  --text-on-accent:   #08080F;
+  /* Text Colors */
+  --text-primary: #ececec;
+  --text-secondary: #9b9b9b;
+  --text-tertiary: #6b6b6b;
+  --text-on-accent: #171717;
 
   /* Borders */
-  --border-subtle:    rgba(255, 255, 255, 0.06);
-  --border-default:   rgba(255, 255, 255, 0.1);
-  --border-strong:    rgba(255, 255, 255, 0.15);
-  --border-accent:    rgba(201, 162, 78, 0.3);
+  --border-default: #383838;
+  --border-subtle: #2f2f2f;
 
-  /* ---- Typography ---- */
-  --font-heading:     'Playfair Display', 'Georgia', serif;
-  --font-body:        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono:        'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  /* Accents */
+  --accent-primary: #ececec;   /* Minimal white accent */
+  --accent-hover: #ffffff;
 
-  --fs-xs:            0.75rem;     /* 12px */
-  --fs-sm:            0.8125rem;   /* 13px */
-  --fs-base:          0.9375rem;   /* 15px */
-  --fs-md:            1.0625rem;   /* 17px */
-  --fs-lg:            1.25rem;     /* 20px */
-  --fs-xl:            1.5rem;      /* 24px */
-  --fs-2xl:           2rem;        /* 32px */
-  --fs-3xl:           2.5rem;      /* 40px */
-  --fs-hero:          3.5rem;      /* 56px */
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
 
-  --fw-normal:        400;
-  --fw-medium:        500;
-  --fw-semibold:      600;
-  --fw-bold:          700;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.5rem;
 
-  --lh-tight:         1.2;
-  --lh-normal:        1.6;
-  --lh-relaxed:       1.8;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
 
-  /* ---- Spacing ---- */
-  --space-1:          0.25rem;     /* 4px */
-  --space-2:          0.5rem;      /* 8px */
-  --space-3:          0.75rem;     /* 12px */
-  --space-4:          1rem;        /* 16px */
-  --space-5:          1.25rem;     /* 20px */
-  --space-6:          1.5rem;      /* 24px */
-  --space-8:          2rem;        /* 32px */
-  --space-10:         2.5rem;      /* 40px */
-  --space-12:         3rem;        /* 48px */
-  --space-16:         4rem;        /* 64px */
-  --space-20:         5rem;        /* 80px */
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
 
-  /* ---- Layout ---- */
-  --sidebar-width:    280px;
-  --sidebar-collapsed: 0px;
-  --header-height:    0px;
-  --input-area-height: auto;
-  --max-chat-width:   800px;
-  --border-radius-sm: 8px;
-  --border-radius-md: 12px;
-  --border-radius-lg: 16px;
-  --border-radius-xl: 24px;
+  /* Dimensions */
+  --sidebar-width: 260px;
+  --chat-max-width: 800px;
+
+  /* Border Radius */
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
   --border-radius-full: 9999px;
 
-  /* ---- Shadows ---- */
-  --shadow-sm:        0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md:        0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg:        0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-xl:        0 16px 48px rgba(0, 0, 0, 0.6);
-  --shadow-glow:      0 0 20px var(--accent-glow);
-  --shadow-glow-strong: 0 0 40px var(--accent-glow-strong);
+  /* Animation */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* ---- Glass ---- */
-  --glass-blur:       blur(20px);
-  --glass-blur-strong: blur(40px);
-  --glass-bg:         rgba(15, 15, 26, 0.7);
-  --glass-bg-solid:   rgba(15, 15, 26, 0.9);
-  --glass-border:     1px solid var(--border-subtle);
-
-  /* ---- Transitions ---- */
-  --ease-out:         cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out:      cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-bounce:      cubic-bezier(0.34, 1.56, 0.64, 1);
-  --duration-fast:    150ms;
-  --duration-normal:  250ms;
-  --duration-slow:    400ms;
-  --duration-slower:  600ms;
-
-  /* ---- Z-Index ---- */
-  --z-base:           1;
-  --z-sidebar:        100;
-  --z-overlay:        200;
-  --z-modal:          300;
-  --z-toast:          400;
+  /* Z-Index */
+  --z-sidebar: 40;
+  --z-header: 30;
+  --z-modal: 100;
+  --z-toast: 110;
 }
