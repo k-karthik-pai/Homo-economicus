@@ -4,19 +4,19 @@
 
 const EXAMPLES = [
   {
-    icon: '💼',
+    label: 'Career',
     text: 'Should I accept a lower-paying job that I\'m passionate about?',
   },
   {
-    icon: '🏠',
+    label: 'Fairness',
     text: 'How do I split costs fairly with my roommates?',
   },
   {
-    icon: '📈',
+    label: 'Capital',
     text: 'Should I invest in stocks or pay off my student debt first?',
   },
   {
-    icon: '🤝',
+    label: 'Strategy',
     text: 'How should I negotiate a salary raise with my boss?',
   },
 ];
@@ -32,15 +32,25 @@ export class WelcomeScreen {
     welcome.id = 'welcome-screen';
 
     welcome.innerHTML = `
-      <div class="welcome__icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      <div class="welcome__eyebrow">
+        <span class="welcome__eyebrow-dot"></span>
+        Decision intelligence for high-stakes trade-offs
       </div>
-      <h1 class="welcome__title">Homo Economicus</h1>
-      <p class="welcome__subtitle">The rational mind for irrational times</p>
+      <h1 class="welcome__title">What decision are we optimizing?</h1>
+      <p class="welcome__subtitle">
+        Bring the messy context. Homo Economicus will pressure-test incentives, uncertainty,
+        trade-offs, and cognitive bias through rigorous decision theory.
+      </p>
+      <div class="welcome__frameworks" aria-label="Supported decision frameworks">
+        <span>Game Theory</span>
+        <span>Bayesian</span>
+        <span>Prospect Theory</span>
+        <span>Expected Utility</span>
+      </div>
       <div class="welcome__cards">
         ${EXAMPLES.map((ex, i) => `
           <button class="welcome__card" data-index="${i}">
-            <div class="welcome__card-icon">${ex.icon}</div>
+            <div class="welcome__card-label">${ex.label}</div>
             <div class="welcome__card-text">${ex.text}</div>
           </button>
         `).join('')}

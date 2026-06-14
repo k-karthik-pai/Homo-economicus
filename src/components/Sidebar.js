@@ -41,8 +41,8 @@ export class Sidebar {
 
       <div class="sidebar__footer">
         <button class="sidebar__user-btn" id="btn-api-key" style="margin-bottom: var(--space-3);">
-          <div class="sidebar__user-avatar" id="api-status-icon" style="background: var(--bg-tertiary); box-shadow: none;">◇</div>
-          <span id="api-status-label">Demo Advisor</span>
+          <div class="sidebar__user-avatar" id="api-status-icon" style="background: var(--bg-tertiary); box-shadow: none;">○</div>
+          <span id="api-status-label">Connect Gemini</span>
         </button>
         <button class="sidebar__user-btn" id="btn-user">
           <div class="sidebar__user-avatar" id="user-avatar">?</div>
@@ -118,9 +118,7 @@ export class Sidebar {
     container.querySelectorAll('.sidebar__history-item__delete').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (confirm('Delete this conversation?')) {
-          this.onDeleteChat(btn.dataset.deleteId);
-        }
+        this.onDeleteChat(btn.dataset.deleteId);
       });
     });
   }
@@ -134,8 +132,8 @@ export class Sidebar {
       icon.textContent = '◆';
       label.textContent = 'Gemini Connected';
     } else {
-      icon.textContent = '◇';
-      label.textContent = 'Demo Advisor';
+      icon.textContent = '○';
+      label.textContent = 'Connect Gemini';
     }
   }
 

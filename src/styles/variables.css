@@ -1,25 +1,30 @@
 :root {
-  /* Minimal Dark Theme (ChatGPT / Claude Style) */
+  /* Frontier AI product palette */
   
   /* Backgrounds */
-  --bg-primary: #212121;       /* Main chat area */
-  --bg-secondary: #171717;     /* Sidebar / Modals */
-  --bg-tertiary: #2f2f2f;      /* User message bubbles / Inputs */
-  --bg-hover: #3a3a3a;         /* Hover states */
+  --bg-primary: #f7f9f7;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #edf3ef;
+  --bg-hover: #e4ece7;
+  --surface-elevated: #ffffff;
+  --surface-soft: #f0f5f2;
 
   /* Text Colors */
-  --text-primary: #ececec;
-  --text-secondary: #9b9b9b;
-  --text-tertiary: #6b6b6b;
-  --text-on-accent: #171717;
+  --text-primary: #13201a;
+  --text-secondary: #53635b;
+  --text-tertiary: #87948e;
+  --text-on-accent: #ffffff;
 
   /* Borders */
-  --border-default: #383838;
-  --border-subtle: #2f2f2f;
+  --border-default: #dbe6df;
+  --border-subtle: #e9efe9;
 
   /* Accents */
-  --accent-primary: #ececec;   /* Minimal white accent */
-  --accent-hover: #ffffff;
+  --accent-primary: #0d7a5f;
+  --accent-hover: #09634e;
+  --accent-soft: #dff3ec;
+  --accent-blue: #2f67d8;
+  --accent-rose: #c7556a;
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -31,6 +36,7 @@
   --fs-lg: 1.125rem;
   --fs-xl: 1.5rem;
   --fs-2xl: 2rem;
+  --fs-3xl: 3rem;
 
   --fw-normal: 400;
   --fw-medium: 500;
@@ -49,14 +55,14 @@
   --space-12: 3rem;
 
   /* Dimensions */
-  --sidebar-width: 260px;
-  --chat-max-width: 800px;
+  --sidebar-width: 288px;
+  --chat-max-width: 860px;
 
   /* Border Radius */
   --border-radius-sm: 0.25rem;
   --border-radius-md: 0.5rem;
-  --border-radius-lg: 0.5rem;
-  --border-radius-xl: 0.75rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
   --border-radius-full: 9999px;
 
   /* Animation */
@@ -69,5 +75,4 @@
   --z-sidebar: 40;
   --z-header: 30;
   --z-modal: 100;
-  --z-toast: 110;
 }

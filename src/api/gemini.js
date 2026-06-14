@@ -6,46 +6,23 @@
  */
 
 import { SYSTEM_PROMPT } from './systemPrompt.js';
-import { streamLocalAnalysis } from './localAdvisor.js';
 
 export const API_KEY_STORAGE_KEY = 'gemini_api_key';
-export const AI_MODE_STORAGE_KEY = 'homo_economicus_ai_mode';
 
-// Retrieve API key from localStorage (set via ApiKeyModal). Fallback to env for static deployments.
+// Retrieve API key from localStorage (set via ApiKeyModal).
 export function getApiKey() {
-  if (isDemoMode()) return '';
-  return getAvailableApiKey();
-}
-
-export function getAvailableApiKey() {
   const stored = readStorage(API_KEY_STORAGE_KEY);
   if (stored) return stored;
-  return import.meta.env.VITE_GEMINI_API_KEY || '';
+  return '';
 }
 
 export function saveApiKey(key) {
   if (!key?.trim()) return;
   writeStorage(API_KEY_STORAGE_KEY, key.trim());
-  writeStorage(AI_MODE_STORAGE_KEY, 'gemini');
 }
 
 export function clearApiKey() {
   removeStorage(API_KEY_STORAGE_KEY);
-  writeStorage(AI_MODE_STORAGE_KEY, 'demo');
-}
-
-export function useDemoMode() {
-  writeStorage(AI_MODE_STORAGE_KEY, 'demo');
-}
-
-export function useGeminiMode() {
-  if (getAvailableApiKey()) {
-    writeStorage(AI_MODE_STORAGE_KEY, 'gemini');
-  }
-}
-
-export function isDemoMode() {
-  return readStorage(AI_MODE_STORAGE_KEY) === 'demo';
 }
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -73,14 +50,12 @@ function getModel(index) {
  */
 export function streamMessage(conversationHistory, onChunk, onComplete, onError) {
   const controller = new AbortController();
-  const demoMode = isDemoMode();
   const currentApiKey = getApiKey();
 
   if (!currentApiKey) {
-    streamLocalAnalysis(conversationHistory, onChunk, onComplete, onError, {
-      signal: controller.signal,
-      reason: demoMode ? 'demo' : 'no-key',
-    });
+    const error = new Error('Gemini API key required. Add your key in Settings to start an analysis.');
+    error.code = 'API_KEY_MISSING';
+    onError(error);
     return controller;
   }
 
@@ -99,13 +74,6 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
       topK: 40,
       maxOutputTokens: 4096,
     },
-  };
-
-  const runLocalFallback = () => {
-    streamLocalAnalysis(conversationHistory, onChunk, onComplete, onError, {
-      signal: controller.signal,
-      reason: 'remote-unavailable',
-    });
   };
 
   // Recursive attempt that falls back through MODELS when a transient model/API issue occurs.
@@ -180,10 +148,6 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
       onComplete(fullText);
     } catch (err) {
       if (err.name === 'AbortError') return; // request was cancelled
-      if (shouldUseLocalFallback(err)) {
-        runLocalFallback();
-        return;
-      }
       onError(err);
     }
   };
@@ -206,21 +170,6 @@ function shouldTryNextModel(error) {
     || error.status === 429
     || error.status >= 500
     || /quota|rate limit|not found|unavailable|overloaded/i.test(error.message);
-}
-
-function shouldUseLocalFallback(error) {
-  if (isAuthError(error)) return false;
-
-  return error.status === 404
-    || error.status === 429
-    || error.status >= 500
-    || /failed to fetch|network|quota|rate limit|not found|unavailable|overloaded|empty streaming response|did not return/i.test(error.message);
-}
-
-function isAuthError(error) {
-  return error.status === 401
-    || error.status === 403
-    || /api key|permission denied|unauthenticated|forbidden/i.test(error.message);
 }
 
 function readStorage(key) {

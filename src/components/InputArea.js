@@ -19,7 +19,7 @@ export class InputArea {
           <textarea
             class="input-area__textarea"
             id="chat-input"
-            placeholder="Describe your decision scenario..."
+            placeholder="Describe the decision, constraints, stakeholders, and what you are optimizing for..."
             rows="1"
             aria-label="Type your message"
           ></textarea>
@@ -28,7 +28,7 @@ export class InputArea {
           </button>
         </div>
         <div class="input-area__hint">
-          Homo Economicus applies scientific theories to help you decide rationally.
+          Requires Gemini. Press Enter to send, Shift+Enter for a new line.
         </div>
       </div>
     `;

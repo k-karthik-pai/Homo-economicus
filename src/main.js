@@ -23,6 +23,7 @@ import {
   createTypingIndicator,
   removeTypingIndicator,
 } from './chat/MessageRenderer.js';
+import { isApiKeyConfigured } from './api/gemini.js';
 import { Sidebar } from './components/Sidebar.js';
 import { InputArea } from './components/InputArea.js';
 import { WelcomeScreen } from './components/WelcomeScreen.js';
@@ -42,13 +43,10 @@ const sidebar = new Sidebar(chatEngine, {
     new ApiKeyModal((status) => {
       sidebar.updateApiStatus();
       if (status === 'saved') {
-        showToast('Gemini API key saved. Live AI mode is on.', 'success');
+        setStatusMessage('Gemini connected. You can start an analysis.', 'success');
       }
       if (status === 'cleared') {
-        showToast('API key cleared. Demo advisor mode is on.', 'success');
-      }
-      if (status === 'demo') {
-        showToast('Demo advisor mode is on.', 'success');
+        setStatusMessage('Gemini key cleared. Add a key before starting a new analysis.', 'neutral');
       }
     });
   },
@@ -66,10 +64,10 @@ const authModal = new AuthModal({
   onLogin: (user) => {
     chatEngine.setUser(user);
     sidebar.updateUser();
-    showToast(`Welcome, ${user.name}!`, 'success');
+    setStatusMessage(`Signed in as ${user.name}.`, 'success');
   },
   onGuest: () => {
-    showToast('Continuing as guest', 'success');
+    setStatusMessage('Continuing as guest.', 'neutral');
   },
 });
 
@@ -100,17 +98,18 @@ function buildApp() {
   chatArea.appendChild(welcomeScreen.render());
 
   main.appendChild(chatArea);
+
+  const status = document.createElement('div');
+  status.className = 'app-status';
+  status.id = 'app-status';
+  status.hidden = true;
+  main.appendChild(status);
+
   main.appendChild(inputArea.render());
   app.appendChild(main);
 
   // Auth modal
   app.appendChild(authModal.render());
-
-  // Toast notification
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.id = 'app-toast';
-  app.appendChild(toast);
 
   // Initial state
   sidebar.updateHistory();
@@ -178,6 +177,14 @@ function renderChatView() {
 async function sendMessage(content) {
   if (chatEngine.isStreaming) return;
 
+  if (!isApiKeyConfigured()) {
+    setStatusMessage('Add a Gemini API key in Settings before starting an analysis.', 'error');
+    inputArea.focus();
+    return;
+  }
+
+  clearStatusMessage();
+
   // Ensure chat view is active
   const conversation = chatEngine.getActiveConversation();
   if (!conversation) {
@@ -225,6 +232,7 @@ async function sendMessage(content) {
     inputArea.setDisabled(false);
     inputArea.focus();
     sidebar.updateHistory();
+    clearStatusMessage();
     scrollToBottom();
   };
 
@@ -233,7 +241,7 @@ async function sendMessage(content) {
     document.getElementById('streaming-message')?.remove();
     inputArea.setDisabled(false);
     inputArea.focus();
-    showToast(`Error: ${error.message}`, 'error');
+    setStatusMessage(error.message, 'error');
     console.error('Stream error:', error);
   };
 
@@ -248,12 +256,9 @@ async function sendMessage(content) {
 
 function handleAuthClick() {
   if (chatEngine.isLoggedIn()) {
-    // Show logout option
-    if (confirm('Sign out?')) {
-      chatEngine.logout();
-      sidebar.updateUser();
-      showToast('Signed out', 'success');
-    }
+    chatEngine.logout();
+    sidebar.updateUser();
+    setStatusMessage('Signed out.', 'neutral');
   } else {
     authModal.show();
   }
@@ -270,16 +275,22 @@ function scrollToBottom() {
   }
 }
 
-function showToast(message, type = 'error') {
-  const toast = document.getElementById('app-toast');
-  if (!toast) return;
+function setStatusMessage(message, type = 'neutral') {
+  const status = document.getElementById('app-status');
+  if (!status) return;
 
-  toast.textContent = message;
-  toast.className = `toast toast--visible toast--${type}`;
+  status.hidden = false;
+  status.textContent = message;
+  status.className = `app-status app-status--${type}`;
+}
 
-  setTimeout(() => {
-    toast.className = 'toast';
-  }, 4000);
+function clearStatusMessage() {
+  const status = document.getElementById('app-status');
+  if (!status) return;
+
+  status.hidden = true;
+  status.textContent = '';
+  status.className = 'app-status';
 }
 
 // ---- Boot ----

@@ -20,7 +20,7 @@
   }
 
   .chat {
-    padding: var(--space-6) var(--space-4);
+    padding: var(--space-6) var(--space-4) 0;
     padding-top: calc(var(--space-6) + 56px);
   }
 
@@ -29,7 +29,7 @@
   }
 
   .welcome__title {
-    font-size: var(--fs-2xl);
+    font-size: 2.2rem;
   }
 
   .welcome__cards {
@@ -42,7 +42,7 @@
   }
 
   .message__body {
-    max-width: 90%;
+    max-width: 100%;
   }
 
   .auth-modal {
@@ -54,17 +54,15 @@
 /* Small mobile */
 @media (max-width: 480px) {
   .welcome__title {
-    font-size: var(--fs-xl);
+    font-size: 1.95rem;
   }
 
-  .welcome__tagline {
+  .welcome__subtitle {
     font-size: var(--fs-base);
   }
 
-  .welcome__icon {
-    width: 64px;
-    height: 64px;
-    font-size: 2rem;
+  .welcome__frameworks {
+    display: none;
   }
 
   .message__bubble {
@@ -72,7 +70,7 @@
   }
 
   .input-area__wrapper {
-    border-radius: var(--border-radius-lg);
+    border-radius: 1.2rem;
     padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
   }
 

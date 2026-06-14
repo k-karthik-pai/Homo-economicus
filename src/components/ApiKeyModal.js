@@ -1,11 +1,8 @@
 import {
   API_KEY_STORAGE_KEY,
   clearApiKey,
-  getAvailableApiKey,
   isApiKeyConfigured,
   saveApiKey,
-  useDemoMode,
-  useGeminiMode,
 } from '../api/gemini.js';
 
 export class ApiKeyModal {
@@ -18,7 +15,6 @@ export class ApiKeyModal {
   }
 
   render() {
-    const hasAvailableKey = !!getAvailableApiKey();
     const isGeminiActive = isApiKeyConfigured();
     const hasBrowserKey = hasStoredBrowserKey();
 
@@ -32,14 +28,14 @@ export class ApiKeyModal {
 
     modal.innerHTML = `
       <button class="auth-modal__close" id="api-key-close" aria-label="Close">✕</button>
-      <div class="auth-modal__icon">◇</div>
-      <h2 class="auth-modal__title">AI Mode</h2>
+      <div class="auth-modal__icon">◆</div>
+      <h2 class="auth-modal__title">Gemini Settings</h2>
       <p class="auth-modal__subtitle">
-        Homo Economicus works immediately with the built-in demo advisor. Add a Gemini API key to use live AI responses.
+        Add your Gemini API key to run live decision analysis. Nothing is sent until you submit a scenario.
       </p>
 
       <div class="api-key-status ${isGeminiActive ? 'api-key-status--connected' : ''}">
-        ${getStatusText(hasAvailableKey, isGeminiActive)}
+        ${isGeminiActive ? 'Gemini is connected.' : 'Gemini is not connected yet.'}
       </div>
 
       <form class="auth-modal__form" id="api-key-form">
@@ -47,7 +43,7 @@ export class ApiKeyModal {
           class="auth-modal__input"
           id="api-key-input"
           type="password"
-          placeholder="${hasAvailableKey ? 'Enter a new key to replace the current one' : 'AIzaSy...'}"
+          placeholder="${isGeminiActive ? 'Enter a new key to replace the current one' : 'AIzaSy...'}"
           autocomplete="off"
           aria-label="Gemini API key"
         >
@@ -55,12 +51,10 @@ export class ApiKeyModal {
       </form>
 
       <p class="api-key-help">
-        Keys are stored only in this browser's local storage. For a production app, use a backend API proxy instead.
+        Keys are stored only on this device. For a hosted production app, use a backend API proxy instead.
         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Get a key</a>.
       </p>
 
-      <button class="auth-modal__guest" id="api-key-demo">Continue in Demo Mode</button>
-      ${hasAvailableKey && !isGeminiActive ? '<button class="auth-modal__guest" id="api-key-live">Use Available Gemini Key</button>' : ''}
       ${hasBrowserKey ? '<button class="auth-modal__guest auth-modal__guest--danger" id="api-key-clear">Clear Saved Key</button>' : ''}
     `;
 
@@ -70,17 +64,6 @@ export class ApiKeyModal {
     modal.addEventListener('click', event => event.stopPropagation());
     this.overlay.addEventListener('click', () => this.close());
     modal.querySelector('#api-key-close').addEventListener('click', () => this.close());
-    modal.querySelector('#api-key-demo').addEventListener('click', () => {
-      useDemoMode();
-      this.onSave?.('demo');
-      this.close();
-    });
-
-    modal.querySelector('#api-key-live')?.addEventListener('click', () => {
-      useGeminiMode();
-      this.onSave?.('saved');
-      this.close();
-    });
 
     modal.querySelector('#api-key-clear')?.addEventListener('click', () => {
       clearApiKey();
@@ -120,10 +103,4 @@ function hasStoredBrowserKey() {
   } catch {
     return false;
   }
-}
-
-function getStatusText(hasAvailableKey, isGeminiActive) {
-  if (isGeminiActive) return 'Gemini key detected. Live AI mode is active.';
-  if (hasAvailableKey) return 'Demo advisor mode is active. A Gemini key is available but paused.';
-  return 'Demo advisor mode is active.';
 }

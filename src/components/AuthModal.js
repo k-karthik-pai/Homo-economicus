@@ -32,6 +32,7 @@ export class AuthModal {
           </div>
           <input class="auth-modal__input" id="auth-email" type="email" placeholder="Email address" autocomplete="email" required>
           <input class="auth-modal__input" id="auth-password" type="password" placeholder="Password" autocomplete="current-password" required>
+          <div class="auth-modal__message" id="auth-message" role="status"></div>
           <button class="auth-modal__submit" type="submit" id="auth-submit">Sign In</button>
         </form>
         
@@ -120,7 +121,7 @@ export class AuthModal {
       // Create account in localStorage
       const accounts = this._getAccounts();
       if (accounts[email]) {
-        this._showToast('Account already exists. Please sign in.', 'error');
+        this._showMessage('Account already exists. Please sign in.');
         return;
       }
       accounts[email] = { name, email, password: this._hash(password), createdAt: Date.now() };
@@ -132,7 +133,7 @@ export class AuthModal {
       const accounts = this._getAccounts();
       const account = accounts[email];
       if (!account || account.password !== this._hash(password)) {
-        this._showToast('Invalid email or password.', 'error');
+        this._showMessage('Invalid email or password.');
         return;
       }
       this.onLogin({ name: account.name, email });
@@ -152,7 +153,7 @@ export class AuthModal {
     localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
   }
 
-  // Simple hash for demo purposes — NOT production-grade security
+  // Simple hash for local-only accounts — NOT production-grade security
   _hash(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -163,14 +164,11 @@ export class AuthModal {
     return hash.toString(36);
   }
 
-  _showToast(message, type = 'error') {
-    // Use the global toast if available
-    const existing = document.getElementById('app-toast');
-    if (existing) {
-      existing.textContent = message;
-      existing.className = `toast toast--visible toast--${type}`;
-      setTimeout(() => { existing.className = 'toast'; }, 3000);
-    }
+  _showMessage(message) {
+    const el = document.getElementById('auth-message');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('auth-modal__message--visible', !!message);
   }
 
   show() {
@@ -179,6 +177,7 @@ export class AuthModal {
       overlay.classList.add('modal-overlay--visible');
       // Reset form
       document.getElementById('auth-form')?.reset();
+      this._showMessage('');
       this.mode = 'login';
       this._updateMode();
     }
