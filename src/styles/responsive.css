@@ -32,7 +32,7 @@
     font-size: var(--fs-2xl);
   }
 
-  .welcome__examples {
+  .welcome__cards {
     grid-template-columns: 1fr;
   }
 
@@ -67,8 +67,8 @@
     font-size: 2rem;
   }
 
-  .message__content {
-    padding: var(--space-3) var(--space-4);
+  .message__bubble {
+    font-size: var(--fs-sm);
   }
 
   .input-area__wrapper {
@@ -84,6 +84,6 @@
 /* Large desktop */
 @media (min-width: 1440px) {
   :root {
-    --max-chat-width: 900px;
+    --chat-max-width: 900px;
   }
 }

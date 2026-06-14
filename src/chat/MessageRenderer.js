@@ -19,7 +19,7 @@ export function renderUserMessage(message) {
       <span>U</span>
     </div>
     <div class="message__body">
-      <div class="message__content">${escapeHtml(message.content)}</div>
+      <div class="message__bubble">${escapeHtml(message.content)}</div>
     </div>
   `;
   return div;
@@ -40,7 +40,7 @@ export function renderAiMessage(message) {
       <span>⚖</span>
     </div>
     <div class="message__body">
-      <div class="message__content">${formatMarkdown(message.content)}</div>
+      <div class="message__bubble">${formatMarkdown(message.content)}</div>
       ${theoriesHtml ? `<div class="message__theories">${theoriesHtml}</div>` : ''}
     </div>
   `;
@@ -59,7 +59,7 @@ export function createStreamingMessage() {
       <span>⚖</span>
     </div>
     <div class="message__body">
-      <div class="message__content streaming-cursor"></div>
+      <div class="message__bubble streaming-cursor"></div>
     </div>
   `;
   return div;
@@ -69,7 +69,7 @@ export function createStreamingMessage() {
  * Update the streaming message content
  */
 export function updateStreamingMessage(fullText) {
-  const el = document.querySelector('#streaming-message .message__content');
+  const el = document.querySelector('#streaming-message .message__bubble');
   if (el) {
     el.innerHTML = formatMarkdown(cleanStreamingContent(fullText));
   }
@@ -83,7 +83,7 @@ export function finalizeStreamingMessage(message) {
   if (!el) return;
 
   el.id = message.id;
-  const content = el.querySelector('.message__content');
+  const content = el.querySelector('.message__bubble');
   if (content) {
     content.classList.remove('streaming-cursor');
     content.innerHTML = formatMarkdown(message.content);
@@ -148,7 +148,7 @@ function renderTheoryBadges(theories) {
  * Clean THEORIES_USED line from streaming content
  */
 function cleanStreamingContent(text) {
-  return text.replace(/\n?THEORIES_USED:\s*.*/i, '').trim();
+  return text.replace(/\n?THEORIES_USED:\s*[a-z0-9,\-\s]+$/i, '').trim();
 }
 
 /**
@@ -157,44 +157,121 @@ function cleanStreamingContent(text) {
 function formatMarkdown(text) {
   if (!text) return '';
 
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const html = [];
+  let paragraph = [];
+  let listType = null;
+  let codeLines = [];
+  let inCodeBlock = false;
+
+  const flushParagraph = () => {
+    if (paragraph.length === 0) return;
+    html.push(`<p>${paragraph.join('<br>')}</p>`);
+    paragraph = [];
+  };
+
+  const closeList = () => {
+    if (!listType) return;
+    html.push(`</${listType}>`);
+    listType = null;
+  };
+
+  const openList = (type) => {
+    flushParagraph();
+    if (listType === type) return;
+    closeList();
+    listType = type;
+    html.push(`<${type}>`);
+  };
+
+  const closeCodeBlock = () => {
+    html.push(`<pre><code>${codeLines.join('\n')}</code></pre>`);
+    codeLines = [];
+    inCodeBlock = false;
+  };
+
+  lines.forEach(rawLine => {
+    const trimmed = rawLine.trim();
+
+    if (trimmed.startsWith('```')) {
+      if (inCodeBlock) {
+        closeCodeBlock();
+      } else {
+        flushParagraph();
+        closeList();
+        inCodeBlock = true;
+      }
+      return;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(escapeHtml(rawLine));
+      return;
+    }
+
+    if (!trimmed) {
+      flushParagraph();
+      closeList();
+      return;
+    }
+
+    const heading = trimmed.match(/^#{1,3}\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      closeList();
+      html.push(`<h3>${formatInline(heading[1])}</h3>`);
+      return;
+    }
+
+    const unordered = trimmed.match(/^[-*]\s+(.+)$/);
+    if (unordered) {
+      openList('ul');
+      html.push(`<li>${formatInline(unordered[1])}</li>`);
+      return;
+    }
+
+    const ordered = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (ordered) {
+      openList('ol');
+      html.push(`<li>${formatInline(ordered[1])}</li>`);
+      return;
+    }
+
+    const quote = trimmed.match(/^>\s+(.+)$/);
+    if (quote) {
+      flushParagraph();
+      closeList();
+      html.push(`<blockquote>${formatInline(quote[1])}</blockquote>`);
+      return;
+    }
+
+    closeList();
+    paragraph.push(formatInline(trimmed));
+  });
+
+  if (inCodeBlock) closeCodeBlock();
+  flushParagraph();
+  closeList();
+
+  return html.join('\n');
+}
+
+function formatInline(text) {
+  const codeSpans = [];
   let html = escapeHtml(text);
 
-  // Headers
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^# (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/`([^`]+)`/g, (_, code) => {
+    const token = `@@CODE_${codeSpans.length}@@`;
+    codeSpans.push(`<code>${code}</code>`);
+    return token;
+  });
 
-  // Bold
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-  // Italic
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Unordered lists
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
-
-  // Ordered lists (numbered)
-  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-
-  // Blockquotes
-  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-
-  // Paragraphs — wrap remaining text blocks
-  html = html
-    .split('\n\n')
-    .map(block => {
-      block = block.trim();
-      if (!block) return '';
-      if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') || block.startsWith('<blockquote') || block.startsWith('<pre')) {
-        return block;
-      }
-      return `<p>${block.replace(/\n/g, '<br>')}</p>`;
-    })
-    .join('\n');
+  codeSpans.forEach((code, index) => {
+    html = html.replace(`@@CODE_${index}@@`, code);
+  });
 
   return html;
 }

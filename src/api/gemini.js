@@ -6,24 +6,57 @@
  */
 
 import { SYSTEM_PROMPT } from './systemPrompt.js';
+import { streamLocalAnalysis } from './localAdvisor.js';
 
-// Retrieve API key from localStorage (set via ApiKeyModal). Fallback to env for legacy support.
-function getApiKey() {
-  const stored = localStorage.getItem('gemini_api_key');
+export const API_KEY_STORAGE_KEY = 'gemini_api_key';
+export const AI_MODE_STORAGE_KEY = 'homo_economicus_ai_mode';
+
+// Retrieve API key from localStorage (set via ApiKeyModal). Fallback to env for static deployments.
+export function getApiKey() {
+  if (isDemoMode()) return '';
+  return getAvailableApiKey();
+}
+
+export function getAvailableApiKey() {
+  const stored = readStorage(API_KEY_STORAGE_KEY);
   if (stored) return stored;
-  // fallback to env variable (if still present)
   return import.meta.env.VITE_GEMINI_API_KEY || '';
 }
 
+export function saveApiKey(key) {
+  if (!key?.trim()) return;
+  writeStorage(API_KEY_STORAGE_KEY, key.trim());
+  writeStorage(AI_MODE_STORAGE_KEY, 'gemini');
+}
+
+export function clearApiKey() {
+  removeStorage(API_KEY_STORAGE_KEY);
+  writeStorage(AI_MODE_STORAGE_KEY, 'demo');
+}
+
+export function useDemoMode() {
+  writeStorage(AI_MODE_STORAGE_KEY, 'demo');
+}
+
+export function useGeminiMode() {
+  if (getAvailableApiKey()) {
+    writeStorage(AI_MODE_STORAGE_KEY, 'gemini');
+  }
+}
+
+export function isDemoMode() {
+  return readStorage(AI_MODE_STORAGE_KEY) === 'demo';
+}
+
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-// Ordered list from most capable to least capable (only models with non‑zero quota)
+
+// Ordered from preferred stable model to lower-cost fallbacks.
 const MODELS = [
   'gemini-3.5-flash',
-  'gemini-3-flash',
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
-  'gemini-3.1-flash-lite',
 ];
+
 // Helper to get model by index (fallback sequence)
 function getModel(index) {
   return MODELS[index] || MODELS[MODELS.length - 1];
@@ -40,10 +73,14 @@ function getModel(index) {
  */
 export function streamMessage(conversationHistory, onChunk, onComplete, onError) {
   const controller = new AbortController();
+  const demoMode = isDemoMode();
   const currentApiKey = getApiKey();
 
   if (!currentApiKey) {
-    onError(new Error('API key not configured. Please enter your Gemini API key.'));
+    streamLocalAnalysis(conversationHistory, onChunk, onComplete, onError, {
+      signal: controller.signal,
+      reason: demoMode ? 'demo' : 'no-key',
+    });
     return controller;
   }
 
@@ -64,7 +101,14 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
     },
   };
 
-  // Recursive attempt that falls back through MODELS when a rate‑limit error occurs.
+  const runLocalFallback = () => {
+    streamLocalAnalysis(conversationHistory, onChunk, onComplete, onError, {
+      signal: controller.signal,
+      reason: 'remote-unavailable',
+    });
+  };
+
+  // Recursive attempt that falls back through MODELS when a transient model/API issue occurs.
   const attempt = async (modelIndex = 0) => {
     const model = getModel(modelIndex);
     const url = `${API_BASE}/${model}:streamGenerateContent?alt=sse&key=${currentApiKey}`;
@@ -78,15 +122,24 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
       });
 
       if (!response.ok) {
-        // If we hit a quota or rate‑limit error, try the next model.
         const errorData = await response.json().catch(() => ({}));
         const msg = errorData?.error?.message || `API error: ${response.status} ${response.statusText}`;
-        if (response.status === 429 || /quota|rate limit/i.test(msg)) {
+        const error = new Error(msg);
+        error.status = response.status;
+
+        if (shouldTryNextModel(error)) {
           if (modelIndex + 1 < MODELS.length) {
             return attempt(modelIndex + 1); // fallback to next model
           }
         }
-        throw new Error(msg);
+
+        throw error;
+      }
+
+      if (!response.body) {
+        const error = new Error('Gemini returned an empty streaming response.');
+        error.status = response.status;
+        throw error;
       }
 
       // ---------- STREAMING RESPONSE ----------
@@ -107,7 +160,8 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
             if (!jsonStr || jsonStr === '[DONE]') continue;
             try {
               const parsed = JSON.parse(jsonStr);
-              const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+              const parts = parsed?.candidates?.[0]?.content?.parts || [];
+              const text = parts.map(part => part.text || '').join('');
               if (text) {
                 fullText += text;
                 onChunk(text, fullText);
@@ -116,9 +170,20 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
           }
         }
       }
+
+      if (!fullText.trim()) {
+        const error = new Error('Gemini did not return any text.');
+        error.status = response.status;
+        throw error;
+      }
+
       onComplete(fullText);
     } catch (err) {
       if (err.name === 'AbortError') return; // request was cancelled
+      if (shouldUseLocalFallback(err)) {
+        runLocalFallback();
+        return;
+      }
       onError(err);
     }
   };
@@ -133,6 +198,47 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
  * Check if the API key is configured
  */
 export function isApiKeyConfigured() {
-  // Returns true if an API key is present either in localStorage or env
   return !!getApiKey();
+}
+
+function shouldTryNextModel(error) {
+  return error.status === 404
+    || error.status === 429
+    || error.status >= 500
+    || /quota|rate limit|not found|unavailable|overloaded/i.test(error.message);
+}
+
+function shouldUseLocalFallback(error) {
+  if (isAuthError(error)) return false;
+
+  return error.status === 404
+    || error.status === 429
+    || error.status >= 500
+    || /failed to fetch|network|quota|rate limit|not found|unavailable|overloaded|empty streaming response|did not return/i.test(error.message);
+}
+
+function isAuthError(error) {
+  return error.status === 401
+    || error.status === 403
+    || /api key|permission denied|unauthenticated|forbidden/i.test(error.message);
+}
+
+function readStorage(key) {
+  try {
+    return localStorage.getItem(key) || '';
+  } catch {
+    return '';
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch { /* storage unavailable */ }
+}
+
+function removeStorage(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch { /* storage unavailable */ }
 }

@@ -8,7 +8,20 @@
 import { streamMessage } from '../api/gemini.js';
 
 const STORAGE_KEY = 'homo_economicus_chats';
+const ACTIVE_CONVERSATION_KEY = 'homo_economicus_active_chat';
 const USER_KEY = 'homo_economicus_user';
+const KNOWN_THEORIES = new Set([
+  'rational-choice',
+  'game-theory',
+  'prospect-theory',
+  'bayesian',
+  'nudge-theory',
+  'expected-utility',
+  'minimax',
+  'pareto',
+  'sunk-cost',
+  'opportunity-cost',
+]);
 
 export class ChatEngine {
   constructor() {
@@ -68,7 +81,20 @@ export class ChatEngine {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
-        parsed.forEach(conv => this.conversations.set(conv.id, conv));
+        parsed.forEach(conv => {
+          this.conversations.set(conv.id, {
+            ...conv,
+            messages: Array.isArray(conv.messages) ? conv.messages : [],
+            updatedAt: conv.updatedAt || conv.createdAt || Date.now(),
+          });
+        });
+
+        const savedActiveId = localStorage.getItem(ACTIVE_CONVERSATION_KEY);
+        if (savedActiveId && this.conversations.has(savedActiveId)) {
+          this.activeConversationId = savedActiveId;
+        } else {
+          this.activeConversationId = this.getConversationList()[0]?.id || null;
+        }
       }
     } catch {
       this.conversations = new Map();
@@ -93,10 +119,12 @@ export class ChatEngine {
       title: 'New Conversation',
       messages: [],
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     this.conversations.set(id, conversation);
     this.activeConversationId = id;
     this._saveToStorage();
+    this._saveActiveConversation();
     this.onConversationsChanged?.();
     return id;
   }
@@ -113,6 +141,7 @@ export class ChatEngine {
   switchConversation(id) {
     if (this.conversations.has(id)) {
       this.activeConversationId = id;
+      this._saveActiveConversation();
       this.onConversationsChanged?.();
       return true;
     }
@@ -122,15 +151,16 @@ export class ChatEngine {
   deleteConversation(id) {
     this.conversations.delete(id);
     if (this.activeConversationId === id) {
-      this.activeConversationId = null;
+      this.activeConversationId = this.getConversationList()[0]?.id || null;
     }
     this._saveToStorage();
+    this._saveActiveConversation();
     this.onConversationsChanged?.();
   }
 
   getConversationList() {
     return Array.from(this.conversations.values())
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
   }
 
   _updateTitle(conversation) {
@@ -162,6 +192,7 @@ export class ChatEngine {
     };
 
     conversation.messages.push(userMessage);
+    conversation.updatedAt = Date.now();
     this._updateTitle(conversation);
     this._saveToStorage();
     this.onMessageAdded?.(userMessage);
@@ -199,6 +230,7 @@ export class ChatEngine {
         aiMessage.content = this._cleanContent(fullText);
 
         conversation.messages.push(aiMessage);
+        conversation.updatedAt = Date.now();
         this._saveToStorage();
         this.isStreaming = false;
         this.currentController = null;
@@ -222,15 +254,25 @@ export class ChatEngine {
   }
 
   _parseTheories(text) {
-    const match = text.match(/THEORIES_USED:\s*(.+)/i);
+    const match = text.match(/THEORIES_USED:\s*([a-z0-9,\-\s]+)/i);
     if (!match) return [];
     return match[1]
       .split(',')
       .map(t => t.trim().toLowerCase())
-      .filter(t => t.length > 0);
+      .filter(t => KNOWN_THEORIES.has(t));
   }
 
   _cleanContent(text) {
-    return text.replace(/\n?THEORIES_USED:\s*.+$/i, '').trim();
+    return text.replace(/\n?THEORIES_USED:\s*[a-z0-9,\-\s]+$/i, '').trim();
+  }
+
+  _saveActiveConversation() {
+    try {
+      if (this.activeConversationId) {
+        localStorage.setItem(ACTIVE_CONVERSATION_KEY, this.activeConversationId);
+      } else {
+        localStorage.removeItem(ACTIVE_CONVERSATION_KEY);
+      }
+    } catch { /* ignore */ }
   }
 }

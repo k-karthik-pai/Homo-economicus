@@ -43,6 +43,14 @@ html, body {
   background: var(--bg-hover);
 }
 
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
+}
+
 /* Main Layout */
 .main {
   flex: 1;

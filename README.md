@@ -1,110 +1,81 @@
-# Homo Economicus ⚖️
+# Homo Economicus
 
-> *"The rational mind for irrational times"*
+> The rational mind for irrational times.
 
-An AI-powered decision advisor that analyzes your scenarios through the lens of scientific decision-making theories — Game Theory, Prospect Theory, Bayesian Reasoning, and more — to deliver the most rational course of action.
+Homo Economicus is a decision-analysis chat prototype. Describe a decision and it returns a structured recommendation grounded in rational choice, game theory, prospect theory, Bayesian reasoning, expected utility, and related decision frameworks.
 
-## 🧠 What It Does
+The app is intentionally shippable as a static prototype: it works immediately in demo mode, and it can use Gemini when a user adds their own API key.
 
-Describe any decision scenario, and Homo Economicus will:
+## What Works
 
-1. **🎯 Recommend** a clear, actionable course of action
-2. **📐 Apply scientific theories** — showing which frameworks (Game Theory, Rational Choice, etc.) inform the advice
-3. **⚖️ Analyze trade-offs** — honest pros and cons of the recommended path
-4. **🧠 Flag cognitive biases** — warn you about psychological traps you might fall into
+- Structured decision analysis with recommendation, theories applied, trade-offs, and cognitive-bias warnings
+- Built-in demo advisor, so the app works without credentials or a backend
+- Optional Gemini streaming responses via a browser-saved API key or `VITE_GEMINI_API_KEY`
+- Conversation history, active chat restore, delete confirmation, and local profile sign-in for prototype use
+- Theory badges parsed from model output
+- Responsive dark UI with mobile sidebar, keyboard send, and streaming states
 
-## 🔬 Scientific Framework
-
-| Theory | What It Does |
-|--------|-------------|
-| Rational Choice Theory | Maximize utility given constraints |
-| Game Theory | Strategic analysis of multi-player scenarios |
-| Prospect Theory | Account for loss aversion and psychological biases |
-| Bayesian Decision Theory | Update beliefs rationally with new evidence |
-| Nudge Theory | Design choice architecture for better decisions |
-| Expected Utility Theory | Weigh outcomes by probability × value |
-| Minimax / Maximin | Minimize worst-case loss |
-| Pareto Optimality | Find win-win solutions |
-| Sunk Cost Awareness | Avoid anchoring to irrecoverable past investments |
-| Opportunity Cost | Always consider what you give up |
-
-## 🚀 Getting Started
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) v18+
-- A free [Google AI Studio](https://aistudio.google.com) API key
-
-### Setup
+## Getting Started
 
 ```bash
-# Clone the repo
-git clone https://github.com/yourusername/Homo-economicus.git
-cd Homo-economicus
-
-# Install dependencies
 npm install
-
-# Add your API key
-# Edit the .env file and replace 'your_api_key_here' with your Gemini API key
-
-# Start the dev server
 npm run dev
 ```
 
-The app will open at `http://localhost:5173`
+Open `http://localhost:5173`.
 
-## 🏗️ Tech Stack
+## AI Modes
 
-| Layer | Technology |
-|-------|-----------|
-| Build | Vite |
-| Frontend | Vanilla JavaScript (ES Modules) |
-| Styling | Vanilla CSS with Custom Properties |
-| AI | Google Gemini API (streaming) |
-| Fonts | Inter + Playfair Display |
-| Persistence | localStorage |
+### Demo Advisor
 
-## 📁 Project Structure
+No setup required. If no Gemini key is configured, Homo Economicus uses the built-in local advisor. This is deterministic and useful for demos, smoke tests, and sharing the prototype without exposing credentials.
 
-```
-├── index.html                  # App shell
-├── vite.config.js              # Vite configuration
-├── .env                        # API key (git-ignored)
-├── public/
-│   ├── favicon.svg             # Scales of justice favicon
-│   └── robots.txt              # SEO
-└── src/
-    ├── main.js                 # App entry point
-    ├── api/
-    │   ├── gemini.js           # Gemini API integration (streaming)
-    │   └── systemPrompt.js     # AI persona & theory framework
-    ├── chat/
-    │   ├── ChatEngine.js       # Conversation management & persistence
-    │   └── MessageRenderer.js  # Message rendering & markdown
-    ├── components/
-    │   ├── Sidebar.js          # Navigation & history
-    │   ├── InputArea.js        # Message input
-    │   ├── WelcomeScreen.js    # Landing screen
-    │   └── AuthModal.js        # Login/Signup
-    └── styles/
-        ├── reset.css           # CSS reset
-        ├── variables.css       # Design tokens
-        ├── base.css            # Global styles
-        ├── components.css      # Sidebar styles
-        ├── chat.css            # Chat & message styles
-        ├── modal.css           # Auth modal & toast styles
-        ├── animations.css      # Keyframe animations
-        └── responsive.css      # Mobile breakpoints
+If an environment key exists, the AI Mode panel can still force Demo Advisor mode for local testing.
+
+### Gemini
+
+Use the sidebar AI Mode control to save a Gemini API key in your browser, or create a local `.env` file:
+
+```bash
+VITE_GEMINI_API_KEY=your_key_here
 ```
 
-## 🗺️ Roadmap
+The current Gemini fallback order is:
 
-- [x] Phase 1 — Website (current)
-- [ ] Phase 2 — Backend API proxy for production security
-- [ ] Phase 3 — Desktop app (Electron/Tauri)
-- [ ] Phase 4 — Mobile app (React Native/Capacitor)
-- [ ] Phase 5 — Decision journal, theory deep-dives, scenario comparison
+1. `gemini-3.5-flash`
+2. `gemini-2.5-flash`
+3. `gemini-2.5-flash-lite`
 
-## 📄 License
+Browser-stored keys are fine for a bring-your-own-key prototype. For production, move Gemini calls behind a backend API proxy so keys are never exposed to the client.
 
-MIT License — see [LICENSE](LICENSE) for details.
+## Scripts
+
+```bash
+npm run dev      # start Vite
+npm run build    # production build to dist/
+npm run preview  # preview the production build
+```
+
+## Project Structure
+
+```text
+src/
+  api/
+    gemini.js          # Gemini streaming + fallback handling
+    localAdvisor.js    # built-in demo advisor
+    systemPrompt.js    # AI persona, theory map, response contract
+  chat/
+    ChatEngine.js      # conversations, persistence, streaming callbacks
+    MessageRenderer.js # message DOM + markdown-lite rendering
+  components/
+    ApiKeyModal.js
+    AuthModal.js
+    InputArea.js
+    Sidebar.js
+    WelcomeScreen.js
+  styles/
+```
+
+## Ship Notes
+
+This is ready to deploy as a static prototype from `dist/`. The remaining production hardening step is a backend proxy for Gemini and real authentication if you want hosted multi-user accounts.

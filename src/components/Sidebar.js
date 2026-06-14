@@ -2,6 +2,8 @@
  * Sidebar — Navigation, conversation history, and user controls
  */
 
+import { isApiKeyConfigured } from '../api/gemini.js';
+
 export class Sidebar {
   constructor(chatEngine, { onNewChat, onSwitchChat, onDeleteChat, onAuthClick, onApiClick }) {
     this.chatEngine = chatEngine;
@@ -39,8 +41,8 @@ export class Sidebar {
 
       <div class="sidebar__footer">
         <button class="sidebar__user-btn" id="btn-api-key" style="margin-bottom: var(--space-3);">
-          <div class="sidebar__user-avatar" style="background: var(--bg-tertiary); box-shadow: none;">🔑</div>
-          <span>API Key Settings</span>
+          <div class="sidebar__user-avatar" id="api-status-icon" style="background: var(--bg-tertiary); box-shadow: none;">◇</div>
+          <span id="api-status-label">Demo Advisor</span>
         </button>
         <button class="sidebar__user-btn" id="btn-user">
           <div class="sidebar__user-avatar" id="user-avatar">?</div>
@@ -116,9 +118,25 @@ export class Sidebar {
     container.querySelectorAll('.sidebar__history-item__delete').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.onDeleteChat(btn.dataset.deleteId);
+        if (confirm('Delete this conversation?')) {
+          this.onDeleteChat(btn.dataset.deleteId);
+        }
       });
     });
+  }
+
+  updateApiStatus() {
+    const icon = document.getElementById('api-status-icon');
+    const label = document.getElementById('api-status-label');
+    if (!icon || !label) return;
+
+    if (isApiKeyConfigured()) {
+      icon.textContent = '◆';
+      label.textContent = 'Gemini Connected';
+    } else {
+      icon.textContent = '◇';
+      label.textContent = 'Demo Advisor';
+    }
   }
 
   updateUser() {

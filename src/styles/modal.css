@@ -134,6 +134,19 @@
   background: var(--bg-hover);
 }
 
+.auth-modal__guest + .auth-modal__guest {
+  margin-top: var(--space-3);
+}
+
+.auth-modal__guest--danger {
+  color: #fca5a5;
+}
+
+.auth-modal__guest--danger:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .auth-modal__toggle {
   margin-top: var(--space-5);
   font-size: var(--fs-sm);
@@ -168,6 +181,35 @@
 .auth-modal__close:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+.api-key-status {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--border-radius-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.api-key-status--connected {
+  border-color: #22c55e;
+  color: var(--text-primary);
+}
+
+.api-key-help {
+  margin: var(--space-4) 0;
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.api-key-help a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Sidebar Overlay */

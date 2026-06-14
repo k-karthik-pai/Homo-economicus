@@ -23,7 +23,6 @@ import {
   createTypingIndicator,
   removeTypingIndicator,
 } from './chat/MessageRenderer.js';
-import { isApiKeyConfigured } from './api/gemini.js';
 import { Sidebar } from './components/Sidebar.js';
 import { InputArea } from './components/InputArea.js';
 import { WelcomeScreen } from './components/WelcomeScreen.js';
@@ -40,8 +39,17 @@ const sidebar = new Sidebar(chatEngine, {
   onDeleteChat: (id) => deleteChat(id),
   onAuthClick: () => handleAuthClick(),
   onApiClick: () => {
-    new ApiKeyModal((key) => {
-      showToast('API Key saved! You can now use the AI.', 'success');
+    new ApiKeyModal((status) => {
+      sidebar.updateApiStatus();
+      if (status === 'saved') {
+        showToast('Gemini API key saved. Live AI mode is on.', 'success');
+      }
+      if (status === 'cleared') {
+        showToast('API key cleared. Demo advisor mode is on.', 'success');
+      }
+      if (status === 'demo') {
+        showToast('Demo advisor mode is on.', 'success');
+      }
     });
   },
 });
@@ -107,13 +115,8 @@ function buildApp() {
   // Initial state
   sidebar.updateHistory();
   sidebar.updateUser();
-
-  // Check API key
-  if (!isApiKeyConfigured()) {
-    const apiKeyModal = new ApiKeyModal((key) => {
-      showToast('API Key saved! You can now use the AI.', 'success');
-    });
-  }
+  sidebar.updateApiStatus();
+  renderChatView();
 
   // Focus input
   inputArea.focus();
