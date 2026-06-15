@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const requestedTarget = process.argv[2] || '';
-const allowedTargets = new Set(['', '--dir', '--win', '--mac']);
+const allowedTargets = new Set(['', '--dir', '--win']);
 
 if (!allowedTargets.has(requestedTarget)) {
   console.error(`Unsupported desktop build target: ${requestedTarget}`);

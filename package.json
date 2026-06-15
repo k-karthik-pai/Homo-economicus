@@ -13,31 +13,27 @@
     "desktop": "npm run build && electron .",
     "desktop:pack": "node scripts/build-desktop.mjs --dir",
     "desktop:dist": "node scripts/build-desktop.mjs",
-    "desktop:dist:win": "node scripts/build-desktop.mjs --win",
-    "desktop:dist:mac": "node scripts/build-desktop.mjs --mac"
+    "desktop:dist:win": "node scripts/build-desktop.mjs --win"
   },
   "build": {
     "appId": "com.homoeconomicus.app",
     "productName": "Homo Economicus",
     "directories": {
+      "buildResources": "build",
       "output": "release"
     },
+    "icon": "build/icon",
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "build/icon.ico",
       "package.json"
     ],
     "asar": true,
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
-        "zip"
-      ]
-    },
-    "mac": {
-      "category": "public.app-category.productivity",
-      "target": [
-        "dmg",
         "zip"
       ]
     },

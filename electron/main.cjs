@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell } = require('electron');
 const path = require('node:path');
 
 const isDev = !app.isPackaged;
+const appIcon = path.join(__dirname, '..', 'build', 'icon.ico');
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -12,7 +13,7 @@ function createWindow() {
     title: 'Homo Economicus',
     backgroundColor: '#f7f9f7',
     autoHideMenuBar: true,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    icon: appIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -41,6 +42,4 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+app.on('window-all-closed', () => app.quit());
