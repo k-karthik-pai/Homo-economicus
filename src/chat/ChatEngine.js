@@ -10,6 +10,8 @@ import { streamMessage } from '../api/gemini.js';
 const STORAGE_KEY = 'homo_economicus_chats';
 const ACTIVE_CONVERSATION_KEY = 'homo_economicus_active_chat';
 const USER_KEY = 'homo_economicus_user';
+const LEGACY_ACCOUNTS_KEY = 'homo_economicus_accounts';
+const MAX_CONTEXT_MESSAGES = 24;
 const KNOWN_THEORIES = new Set([
   'rational-choice',
   'game-theory',
@@ -30,6 +32,8 @@ export class ChatEngine {
     this.activeConversationId = null;
     this.isStreaming = false;
     this.currentController = null;
+    this.streamingConversationId = null;
+    this.streamingAiMessage = null;
     this.user = null;
 
     // Callbacks — set by main.js
@@ -37,13 +41,21 @@ export class ChatEngine {
     this.onStreamChunk = null;
     this.onStreamComplete = null;
     this.onStreamError = null;
+    this.onStreamCancelled = null;
     this.onConversationsChanged = null;
 
     this._loadFromStorage();
+    this._removeLegacyAccounts();
     this._loadUser();
   }
 
   // ---- User Management ----
+
+  _removeLegacyAccounts() {
+    try {
+      localStorage.removeItem(LEGACY_ACCOUNTS_KEY);
+    } catch { /* storage unavailable */ }
+  }
 
   _loadUser() {
     try {
@@ -54,11 +66,13 @@ export class ChatEngine {
 
   setUser(user) {
     this.user = user;
-    if (user) {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(USER_KEY);
-    }
+    try {
+      if (user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(USER_KEY);
+      }
+    } catch { /* storage unavailable */ }
   }
 
   getUser() {
@@ -71,7 +85,9 @@ export class ChatEngine {
 
   logout() {
     this.user = null;
-    localStorage.removeItem(USER_KEY);
+    try {
+      localStorage.removeItem(USER_KEY);
+    } catch { /* storage unavailable */ }
   }
 
   // ---- Conversation Management ----
@@ -149,6 +165,9 @@ export class ChatEngine {
   }
 
   deleteConversation(id) {
+    const conversation = this.conversations.get(id);
+    if (!conversation) return null;
+
     this.conversations.delete(id);
     if (this.activeConversationId === id) {
       this.activeConversationId = this.getConversationList()[0]?.id || null;
@@ -156,6 +175,19 @@ export class ChatEngine {
     this._saveToStorage();
     this._saveActiveConversation();
     this.onConversationsChanged?.();
+    return conversation;
+  }
+
+  restoreConversation(conversation) {
+    if (!conversation?.id || this.conversations.has(conversation.id)) return false;
+
+    conversation.updatedAt = Date.now();
+    this.conversations.set(conversation.id, conversation);
+    this.activeConversationId = conversation.id;
+    this._saveToStorage();
+    this._saveActiveConversation();
+    this.onConversationsChanged?.();
+    return true;
   }
 
   getConversationList() {
@@ -208,9 +240,11 @@ export class ChatEngine {
       theories: [],
       timestamp: Date.now(),
     };
+    this.streamingConversationId = conversation.id;
+    this.streamingAiMessage = aiMessage;
 
     // Build history for API (only send user/ai content pairs)
-    const history = conversation.messages.map(m => ({
+    const history = conversation.messages.slice(-MAX_CONTEXT_MESSAGES).map(m => ({
       role: m.role,
       content: m.content,
     }));
@@ -232,25 +266,49 @@ export class ChatEngine {
         conversation.messages.push(aiMessage);
         conversation.updatedAt = Date.now();
         this._saveToStorage();
-        this.isStreaming = false;
-        this.currentController = null;
+        this._clearStreamingState();
         this.onStreamComplete?.(aiMessage);
       },
       // onError
       (error) => {
-        this.isStreaming = false;
-        this.currentController = null;
+        this._clearStreamingState();
         this.onStreamError?.(error);
       }
     );
   }
 
   cancelStream() {
-    if (this.currentController) {
-      this.currentController.abort();
-      this.isStreaming = false;
-      this.currentController = null;
+    if (!this.currentController || !this.isStreaming) return false;
+
+    const conversation = this.streamingConversationId
+      ? this.conversations.get(this.streamingConversationId)
+      : null;
+    const aiMessage = this.streamingAiMessage;
+    const partialContent = aiMessage?.content?.trim() || '';
+    const cleanedContent = partialContent ? this._cleanContent(partialContent) : '';
+
+    this.currentController.abort();
+
+    if (conversation && aiMessage && cleanedContent) {
+      aiMessage.content = cleanedContent;
+      aiMessage.theories = this._parseTheories(partialContent);
+      aiMessage.interrupted = true;
+      conversation.messages.push(aiMessage);
+      conversation.updatedAt = Date.now();
+      this._saveToStorage();
     }
+
+    this._clearStreamingState();
+    this.onStreamCancelled?.(cleanedContent ? aiMessage : null);
+    this.onConversationsChanged?.();
+    return true;
+  }
+
+  _clearStreamingState() {
+    this.isStreaming = false;
+    this.currentController = null;
+    this.streamingConversationId = null;
+    this.streamingAiMessage = null;
   }
 
   _parseTheories(text) {

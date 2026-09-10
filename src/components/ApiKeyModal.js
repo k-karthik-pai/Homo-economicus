@@ -1,5 +1,4 @@
 import {
-  API_KEY_STORAGE_KEY,
   clearApiKey,
   isApiKeyConfigured,
   saveApiKey,
@@ -16,7 +15,7 @@ export class ApiKeyModal {
 
   render() {
     const isGeminiActive = isApiKeyConfigured();
-    const hasBrowserKey = hasStoredBrowserKey();
+    const isDesktop = !!window.homoEconomicusDesktop;
 
     this.overlay = document.createElement('div');
     this.overlay.className = 'modal-overlay modal-overlay--visible';
@@ -24,12 +23,15 @@ export class ApiKeyModal {
 
     const modal = document.createElement('div');
     modal.className = 'auth-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'api-key-title');
     this.overlay.appendChild(modal);
 
     modal.innerHTML = `
       <button class="auth-modal__close" id="api-key-close" aria-label="Close">✕</button>
       <div class="auth-modal__icon">◆</div>
-      <h2 class="auth-modal__title">Gemini Settings</h2>
+      <h2 class="auth-modal__title" id="api-key-title">Gemini Settings</h2>
       <p class="auth-modal__subtitle">
         Add your Gemini API key to run live decision analysis. Nothing is sent until you submit a scenario.
       </p>
@@ -45,17 +47,22 @@ export class ApiKeyModal {
           type="password"
           placeholder="${isGeminiActive ? 'Enter a new key to replace the current one' : 'AIzaSy...'}"
           autocomplete="off"
+          maxlength="1024"
+          spellcheck="false"
           aria-label="Gemini API key"
         >
-        <button class="auth-modal__submit" type="submit">Save Gemini Key</button>
+        <div class="auth-modal__message" id="api-key-message" role="status"></div>
+        <button class="auth-modal__submit" id="api-key-submit" type="submit">Save Gemini Key</button>
       </form>
 
       <p class="api-key-help">
-        Keys are stored only on this device. For a hosted production app, use a backend API proxy instead.
+        ${isDesktop
+          ? 'Your key is encrypted with Windows secure storage and stays on this device.'
+          : 'Your key is stored in this browser only. Do not use a shared browser profile.'}
         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Get a key</a>.
       </p>
 
-      ${hasBrowserKey ? '<button class="auth-modal__guest auth-modal__guest--danger" id="api-key-clear">Clear Saved Key</button>' : ''}
+      ${isGeminiActive ? '<button class="auth-modal__guest auth-modal__guest--danger" id="api-key-clear" type="button">Clear Saved Key</button>' : ''}
     `;
 
     const input = modal.querySelector('#api-key-input');
@@ -65,19 +72,31 @@ export class ApiKeyModal {
     this.overlay.addEventListener('click', () => this.close());
     modal.querySelector('#api-key-close').addEventListener('click', () => this.close());
 
-    modal.querySelector('#api-key-clear')?.addEventListener('click', () => {
-      clearApiKey();
-      this.onSave?.('cleared');
-      this.close();
+    modal.querySelector('#api-key-clear')?.addEventListener('click', async () => {
+      this._setBusy(true);
+      try {
+        await clearApiKey();
+        this.onSave?.('cleared');
+        this.close();
+      } catch (error) {
+        this._showError(error.message || 'Could not clear the saved key.');
+        this._setBusy(false);
+      }
     });
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const key = input.value.trim();
       if (key) {
-        saveApiKey(key);
-        this.onSave?.('saved');
-        this.close();
+        this._setBusy(true);
+        try {
+          await saveApiKey(key);
+          this.onSave?.('saved');
+          this.close();
+        } catch (error) {
+          this._showError(error.message || 'Could not save the Gemini key.');
+          this._setBusy(false);
+        }
       } else {
         input.focus();
         input.setAttribute('aria-invalid', 'true');
@@ -89,18 +108,30 @@ export class ApiKeyModal {
   }
 
   close() {
-    if (this.overlay) {
+    if (this.overlay && !this.isClosing) {
+      this.isClosing = true;
       this.overlay.classList.remove('modal-overlay--visible');
       setTimeout(() => this.overlay.remove(), 300); // match fade-out duration
       document.removeEventListener('keydown', this.handleEscape);
     }
   }
-}
 
-function hasStoredBrowserKey() {
-  try {
-    return !!localStorage.getItem(API_KEY_STORAGE_KEY);
-  } catch {
-    return false;
+  _setBusy(isBusy) {
+    const input = this.overlay?.querySelector('#api-key-input');
+    const submit = this.overlay?.querySelector('#api-key-submit');
+    const clear = this.overlay?.querySelector('#api-key-clear');
+    if (input) input.disabled = isBusy;
+    if (submit) {
+      submit.disabled = isBusy;
+      submit.textContent = isBusy ? 'Saving...' : 'Save Gemini Key';
+    }
+    if (clear) clear.disabled = isBusy;
+  }
+
+  _showError(message) {
+    const error = this.overlay?.querySelector('#api-key-message');
+    if (!error) return;
+    error.textContent = message;
+    error.classList.add('auth-modal__message--visible');
   }
 }

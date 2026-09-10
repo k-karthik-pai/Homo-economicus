@@ -2,84 +2,81 @@
 
 > The rational mind for irrational times.
 
-Homo Economicus is a polished decision-analysis app for thinking through high-stakes trade-offs. Describe a decision and it streams a structured recommendation grounded in rational choice, game theory, prospect theory, Bayesian reasoning, expected utility, and related decision frameworks.
+Homo Economicus is a finished Windows-first decision-analysis prototype. Describe a decision and it streams a structured Gemini recommendation grounded in rational choice, game theory, prospect theory, Bayesian reasoning, expected utility, and related frameworks.
 
-The app now runs as both a web app and a downloadable Electron desktop app for Windows.
+## Product Features
 
-## What Works
+- Live Gemini streaming with clear error states and a Stop control
+- Structured recommendations with parsed decision-theory badges
+- Multiple conversations with persistence, restore, deletion, and inline Undo
+- Optional device-local display profile with no account or password collection
+- Responsive web interface and hardened Electron desktop shell
+- Windows-encrypted Gemini key storage in the desktop app
+- Windows installer and portable zip packaging
 
-- Prompt-first AI interface inspired by modern frontier AI products
-- Live Gemini streaming responses with theory badges parsed from model output
-- Device-local Gemini key settings
-- Conversation history, active chat restore, delete without browser confirmation popups, and local profile sign-in
-- Inline status messages instead of disruptive notifications
-- Responsive web UI and Electron desktop shell
-- Windows installer and zip packaging through Electron Builder
+## Requirements
 
-## Getting Started
+- Windows 10 or 11, x64
+- Internet access and a Gemini API key for live analysis
+- Node.js 22.12 or newer only when developing or rebuilding the app
+
+## Run From Source
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+Open `http://localhost:5173`, then choose **Connect Gemini** in the sidebar.
 
-Add your Gemini API key from the sidebar Settings control before sending an analysis. Keys are stored only on the current device.
-
-## Desktop App
-
-Run the desktop app locally:
+Run the desktop shell locally:
 
 ```bash
 npm run desktop
 ```
 
-Create unpacked desktop builds:
+## Verify And Package
 
 ```bash
-npm run desktop:pack
+npm test                 # dependency-free chat and key-storage smoke checks
+npm run verify           # smoke checks plus production web build
+npm run desktop:pack     # unpacked Windows app
+npm run desktop:dist     # Windows installer and zip
+npm run desktop:dist:win # explicit Windows distribution alias
 ```
 
-Create downloadable installers/packages:
+Desktop artifacts are written to `release/`. The distributable files are:
 
-```bash
-npm run desktop:dist:win
-```
+- `Homo Economicus Setup 1.0.0.exe`
+- `Homo Economicus-1.0.0-win.zip`
 
-Artifacts are written to `release/`.
+## Local Data And Privacy
 
-The Windows build produces an NSIS installer and zip package. Code signing can be added before public distribution.
-
-## Scripts
-
-```bash
-npm run dev              # start Vite
-npm run build            # production web build to dist/
-npm run preview          # preview the production web build
-npm run desktop          # build and launch Electron locally
-npm run desktop:pack     # build unpacked Electron app
-npm run desktop:dist     # build desktop distributables for the host OS
-npm run desktop:dist:win # build Windows installer and zip
-```
+- Conversations and the optional display profile are stored on the current device.
+- The Windows desktop app encrypts the Gemini key with Electron `safeStorage`, backed by Windows protection.
+- The web build stores the Gemini key in that browser profile because browsers do not expose Windows secure storage.
+- The key is sent to Google only in the `x-goog-api-key` request header when an analysis is submitted.
+- No project-owned backend, analytics service, or cloud account system is used.
 
 ## Project Structure
 
 ```text
 electron/
-  main.cjs           # Electron main process
-  preload.cjs        # Isolated preload bridge
+  main.cjs             # Windows shell, security policy, encrypted key IPC
+  preload.cjs          # minimal isolated desktop bridge
+scripts/
+  after-pack.cjs       # removes unused stock Electron runtime files
+  build-desktop.mjs    # Windows packaging helper
+  smoke-chat-flow.mjs  # dependency-free behavioral verification
 src/
-  api/
-    gemini.js        # Gemini streaming + model fallback handling
-    systemPrompt.js  # AI persona, theory map, response contract
-  chat/
-    ChatEngine.js
-    MessageRenderer.js
-  components/
-  styles/
+  api/                 # Gemini streaming and decision system prompt
+  chat/                # conversation state and message rendering
+  components/          # sidebar, composer, settings, profile, welcome UI
+  styles/              # responsive visual system
 ```
 
-## Production Notes
+## Distribution Note
 
-For a hosted web product, move Gemini calls behind a backend API proxy so API keys are never exposed to the browser. For desktop distribution, add Windows code signing before public release.
+The generated installer is suitable for personal distribution and testing. Windows code signing is not configured, so SmartScreen may warn users who download it from the internet. Add a trusted signing certificate only if you plan a broader public release.
+
+Licensed under the [MIT License](LICENSE).

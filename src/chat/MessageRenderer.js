@@ -41,6 +41,7 @@ export function renderAiMessage(message) {
     </div>
     <div class="message__body">
       <div class="message__bubble">${formatMarkdown(message.content)}</div>
+      ${message.interrupted ? renderInterruptedNotice() : ''}
       ${theoriesHtml ? `<div class="message__theories">${theoriesHtml}</div>` : ''}
     </div>
   `;
@@ -89,6 +90,10 @@ export function finalizeStreamingMessage(message) {
     content.innerHTML = formatMarkdown(message.content);
   }
 
+  if (message.interrupted) {
+    el.querySelector('.message__body').appendChild(createInterruptedNotice());
+  }
+
   // Add theory badges
   if (message.theories?.length > 0) {
     const theoriesDiv = document.createElement('div');
@@ -96,6 +101,17 @@ export function finalizeStreamingMessage(message) {
     theoriesDiv.innerHTML = renderTheoryBadges(message.theories);
     el.querySelector('.message__body').appendChild(theoriesDiv);
   }
+}
+
+function renderInterruptedNotice() {
+  return '<div class="message__meta">Stopped early. This answer may be incomplete.</div>';
+}
+
+function createInterruptedNotice() {
+  const div = document.createElement('div');
+  div.className = 'message__meta';
+  div.textContent = 'Stopped early. This answer may be incomplete.';
+  return div;
 }
 
 /**

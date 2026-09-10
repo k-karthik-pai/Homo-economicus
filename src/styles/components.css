@@ -126,6 +126,10 @@
   opacity: 1;
 }
 
+.sidebar__history-item__delete:focus-visible {
+  opacity: 1;
+}
+
 .sidebar__history-item__delete:hover {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);

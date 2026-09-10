@@ -2,9 +2,6 @@
    BASE STYLES — Global Layout
    ============================================ */
 
-/* Import Google Fonts (only Inter and JetBrains Mono) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
 html, body {
   width: 100%;
   height: 100%;

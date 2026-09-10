@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src https://generativelanguage.googleapis.com ws://localhost:* ws://127.0.0.1:*; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 
   <!-- SEO -->
   <title>Homo Economicus — AI Rational Decision Advisor</title>
@@ -14,17 +15,12 @@
   <meta property="og:title" content="Homo Economicus — The Rational Mind for Irrational Times">
   <meta property="og:description" content="AI-powered decision advisor grounded in scientific theories. Get rational, actionable advice for any scenario.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="/og-image.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-
-  <!-- Preconnect to Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 </head>
 <body>
   <div id="app"></div>
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

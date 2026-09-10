@@ -23,11 +23,11 @@ import {
   createTypingIndicator,
   removeTypingIndicator,
 } from './chat/MessageRenderer.js';
-import { isApiKeyConfigured } from './api/gemini.js';
+import { initializeApiKey, isApiKeyConfigured } from './api/gemini.js';
 import { Sidebar } from './components/Sidebar.js';
 import { InputArea } from './components/InputArea.js';
 import { WelcomeScreen } from './components/WelcomeScreen.js';
-import { AuthModal } from './components/AuthModal.js';
+import { ProfileModal } from './components/ProfileModal.js';
 import { ApiKeyModal } from './components/ApiKeyModal.js';
 
 // ---- Initialize Engine ----
@@ -38,10 +38,11 @@ const sidebar = new Sidebar(chatEngine, {
   onNewChat: () => startNewChat(),
   onSwitchChat: (id) => switchToChat(id),
   onDeleteChat: (id) => deleteChat(id),
-  onAuthClick: () => handleAuthClick(),
+  onProfileClick: () => profileModal.show(),
   onApiClick: () => {
     new ApiKeyModal((status) => {
       sidebar.updateApiStatus();
+      inputArea.setApiConfigured(isApiKeyConfigured());
       if (status === 'saved') {
         setStatusMessage('Gemini connected. You can start an analysis.', 'success');
       }
@@ -54,20 +55,24 @@ const sidebar = new Sidebar(chatEngine, {
 
 const inputArea = new InputArea({
   onSend: (content) => sendMessage(content),
+  onCancel: () => stopGeneration(),
 });
 
 const welcomeScreen = new WelcomeScreen({
   onExampleClick: (text) => sendMessage(text),
 });
 
-const authModal = new AuthModal({
-  onLogin: (user) => {
+const profileModal = new ProfileModal({
+  getUser: () => chatEngine.getUser(),
+  onSave: (user) => {
     chatEngine.setUser(user);
     sidebar.updateUser();
-    setStatusMessage(`Signed in as ${user.name}.`, 'success');
+    setStatusMessage(`Local profile saved for ${user.name}.`, 'success');
   },
-  onGuest: () => {
-    setStatusMessage('Continuing as guest.', 'neutral');
+  onClear: () => {
+    chatEngine.logout();
+    sidebar.updateUser();
+    setStatusMessage('Local profile removed.', 'neutral');
   },
 });
 
@@ -108,13 +113,13 @@ function buildApp() {
   main.appendChild(inputArea.render());
   app.appendChild(main);
 
-  // Auth modal
-  app.appendChild(authModal.render());
+  app.appendChild(profileModal.render());
 
   // Initial state
   sidebar.updateHistory();
   sidebar.updateUser();
   sidebar.updateApiStatus();
+  inputArea.setApiConfigured(isApiKeyConfigured());
   renderChatView();
 
   // Focus input
@@ -124,22 +129,56 @@ function buildApp() {
 // ---- Chat Operations ----
 
 function startNewChat() {
+  if (!canChangeConversation()) return;
+
+  const activeConversation = chatEngine.getActiveConversation();
+  if (activeConversation?.messages.length === 0) {
+    clearStatusMessage();
+    inputArea.focus();
+    return;
+  }
+
   chatEngine.createConversation();
+  clearStatusMessage();
   renderChatView();
   sidebar.updateHistory();
   inputArea.focus();
 }
 
 function switchToChat(id) {
+  if (id === chatEngine.activeConversationId) return;
+  if (!canChangeConversation()) return;
+
   chatEngine.switchConversation(id);
+  clearStatusMessage();
   renderChatView();
   sidebar.updateHistory();
+  inputArea.focus();
 }
 
 function deleteChat(id) {
-  chatEngine.deleteConversation(id);
+  if (!canChangeConversation()) return;
+
+  const deletedConversation = chatEngine.deleteConversation(id);
+  if (!deletedConversation) return;
+
   renderChatView();
   sidebar.updateHistory();
+  setStatusMessage('Conversation deleted.', 'neutral', {
+    label: 'Undo',
+    onClick: () => {
+      if (!chatEngine.restoreConversation(deletedConversation)) return;
+      renderChatView();
+      sidebar.updateHistory();
+      setStatusMessage('Conversation restored.', 'success');
+    },
+  });
+}
+
+function canChangeConversation() {
+  if (!chatEngine.isStreaming) return true;
+  setStatusMessage('Stop the current response before changing conversations.', 'neutral');
+  return false;
 }
 
 function renderChatView() {
@@ -174,13 +213,13 @@ function renderChatView() {
   scrollToBottom();
 }
 
-async function sendMessage(content) {
-  if (chatEngine.isStreaming) return;
+function sendMessage(content) {
+  if (chatEngine.isStreaming) return false;
 
   if (!isApiKeyConfigured()) {
     setStatusMessage('Add a Gemini API key in Settings before starting an analysis.', 'error');
     inputArea.focus();
-    return;
+    return false;
   }
 
   clearStatusMessage();
@@ -202,8 +241,7 @@ async function sendMessage(content) {
     chatArea.appendChild(container);
   }
 
-  // Disable input while streaming
-  inputArea.setDisabled(true);
+  inputArea.setStreaming(true);
 
   // Engine callbacks for this message
   chatEngine.onMessageAdded = (msg) => {
@@ -229,7 +267,7 @@ async function sendMessage(content) {
 
   chatEngine.onStreamComplete = (aiMsg) => {
     finalizeStreamingMessage(aiMsg);
-    inputArea.setDisabled(false);
+    inputArea.setStreaming(false);
     inputArea.focus();
     sidebar.updateHistory();
     clearStatusMessage();
@@ -239,29 +277,39 @@ async function sendMessage(content) {
   chatEngine.onStreamError = (error) => {
     removeTypingIndicator();
     document.getElementById('streaming-message')?.remove();
-    inputArea.setDisabled(false);
+    inputArea.setStreaming(false);
     inputArea.focus();
     setStatusMessage(error.message, 'error');
     console.error('Stream error:', error);
+  };
+
+  chatEngine.onStreamCancelled = (aiMsg) => {
+    removeTypingIndicator();
+    if (aiMsg) {
+      finalizeStreamingMessage(aiMsg);
+    } else {
+      document.getElementById('streaming-message')?.remove();
+    }
+    inputArea.setStreaming(false);
+    inputArea.focus();
+    sidebar.updateHistory();
+    setStatusMessage(
+      aiMsg ? 'Generation stopped. Partial answer saved.' : 'Generation stopped.',
+      'neutral'
+    );
+    scrollToBottom();
   };
 
   chatEngine.onConversationsChanged = () => {
     sidebar.updateHistory();
   };
 
-  await chatEngine.sendMessage(content);
+  chatEngine.sendMessage(content);
+  return true;
 }
 
-// ---- Auth ----
-
-function handleAuthClick() {
-  if (chatEngine.isLoggedIn()) {
-    chatEngine.logout();
-    sidebar.updateUser();
-    setStatusMessage('Signed out.', 'neutral');
-  } else {
-    authModal.show();
-  }
+function stopGeneration() {
+  chatEngine.cancelStream();
 }
 
 // ---- Utilities ----
@@ -275,13 +323,26 @@ function scrollToBottom() {
   }
 }
 
-function setStatusMessage(message, type = 'neutral') {
+function setStatusMessage(message, type = 'neutral', action = null) {
   const status = document.getElementById('app-status');
   if (!status) return;
 
   status.hidden = false;
-  status.textContent = message;
   status.className = `app-status app-status--${type}`;
+  status.replaceChildren();
+
+  const text = document.createElement('span');
+  text.textContent = message;
+  status.appendChild(text);
+
+  if (action) {
+    const button = document.createElement('button');
+    button.className = 'app-status__action';
+    button.type = 'button';
+    button.textContent = action.label;
+    button.addEventListener('click', action.onClick, { once: true });
+    status.appendChild(button);
+  }
 }
 
 function clearStatusMessage() {
@@ -289,9 +350,27 @@ function clearStatusMessage() {
   if (!status) return;
 
   status.hidden = true;
-  status.textContent = '';
+  status.replaceChildren();
   status.className = 'app-status';
 }
 
 // ---- Boot ----
-document.addEventListener('DOMContentLoaded', buildApp);
+async function boot() {
+  let apiKeyError = null;
+  try {
+    await initializeApiKey();
+  } catch (error) {
+    apiKeyError = error;
+  }
+
+  buildApp();
+  if (apiKeyError) {
+    setStatusMessage(apiKeyError.message || 'Could not access the saved Gemini key.', 'error');
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+  boot();
+}

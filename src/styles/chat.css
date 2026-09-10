@@ -237,6 +237,19 @@
   font-size: 0.9em;
 }
 
+.message__meta {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-2);
+  padding: 0.25rem var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--border-radius-full);
+  background: var(--surface-soft);
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  line-height: 1.2;
+}
+
 .streaming-cursor::after {
   content: '';
   display: inline-block;
@@ -312,6 +325,15 @@
   background: var(--accent-hover);
   transform: translateY(-1px);
 }
+
+.input-area__send--stop {
+  background: #8e2334;
+}
+
+.input-area__send--stop:hover:not(:disabled) {
+  background: #6f1b29;
+}
+
 .input-area__send:disabled {
   background: var(--surface-soft);
   color: var(--text-tertiary);
@@ -337,6 +359,10 @@
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   box-shadow: 0 12px 36px rgba(19, 32, 26, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .app-status[hidden] {
@@ -351,6 +377,21 @@
 .app-status--error {
   border-color: #edbdc4;
   color: #8e2334;
+}
+
+.app-status__action {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid currentColor;
+  border-radius: var(--border-radius-full);
+  color: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.app-status__action:hover {
+  background: var(--surface-soft);
 }
 
 /* Theory Badges */

@@ -3,16 +3,22 @@
   "private": true,
   "version": "1.0.0",
   "description": "The rational mind for irrational times — AI-powered decision advisor grounded in scientific theories",
-  "author": "Homo Economicus",
+  "author": "Karthik Pai",
+  "license": "MIT",
   "type": "module",
   "main": "electron/main.cjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "node scripts/smoke-chat-flow.mjs",
+    "verify": "node scripts/smoke-chat-flow.mjs && vite build",
     "desktop": "npm run build && electron .",
     "desktop:pack": "node scripts/build-desktop.mjs --dir",
-    "desktop:dist": "node scripts/build-desktop.mjs",
+    "desktop:dist": "node scripts/build-desktop.mjs --win",
     "desktop:dist:win": "node scripts/build-desktop.mjs --win"
   },
   "build": {
@@ -30,6 +36,7 @@
       "package.json"
     ],
     "asar": true,
+    "afterPack": "scripts/after-pack.cjs",
     "win": {
       "icon": "build/icon.ico",
       "target": [

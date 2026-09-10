@@ -9,20 +9,53 @@ import { SYSTEM_PROMPT } from './systemPrompt.js';
 
 export const API_KEY_STORAGE_KEY = 'gemini_api_key';
 
-// Retrieve API key from localStorage (set via ApiKeyModal).
+let desktopApiKey = '';
+
+export async function initializeApiKey() {
+  const desktopStore = getDesktopApiKeyStore();
+  if (!desktopStore) return;
+
+  const legacyKey = readStorage(API_KEY_STORAGE_KEY);
+  desktopApiKey = (await desktopStore.get()) || '';
+
+  if (!desktopApiKey && legacyKey) {
+    await desktopStore.set(legacyKey);
+    desktopApiKey = legacyKey;
+  }
+
+  if (legacyKey) removeStorage(API_KEY_STORAGE_KEY);
+}
+
+// Desktop uses Windows secure storage; the web build falls back to localStorage.
 export function getApiKey() {
+  if (getDesktopApiKeyStore()) return desktopApiKey;
   const stored = readStorage(API_KEY_STORAGE_KEY);
   if (stored) return stored;
   return '';
 }
 
-export function saveApiKey(key) {
-  if (!key?.trim()) return;
-  writeStorage(API_KEY_STORAGE_KEY, key.trim());
+export async function saveApiKey(key) {
+  const trimmedKey = key?.trim();
+  if (!trimmedKey) return false;
+
+  const desktopStore = getDesktopApiKeyStore();
+  if (desktopStore) {
+    await desktopStore.set(trimmedKey);
+    desktopApiKey = trimmedKey;
+  } else {
+    writeStorage(API_KEY_STORAGE_KEY, trimmedKey);
+  }
+  return true;
 }
 
-export function clearApiKey() {
-  removeStorage(API_KEY_STORAGE_KEY);
+export async function clearApiKey() {
+  const desktopStore = getDesktopApiKeyStore();
+  if (desktopStore) {
+    await desktopStore.clear();
+    desktopApiKey = '';
+  } else {
+    removeStorage(API_KEY_STORAGE_KEY);
+  }
 }
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -69,9 +102,8 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
     system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents,
     generationConfig: {
-      temperature: 0.8,
-      topP: 0.95,
-      topK: 40,
+      temperature: 0.5,
+      topP: 0.9,
       maxOutputTokens: 4096,
     },
   };
@@ -79,12 +111,15 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
   // Recursive attempt that falls back through MODELS when a transient model/API issue occurs.
   const attempt = async (modelIndex = 0) => {
     const model = getModel(modelIndex);
-    const url = `${API_BASE}/${model}:streamGenerateContent?alt=sse&key=${currentApiKey}`;
+    const url = `${API_BASE}/${model}:streamGenerateContent?alt=sse`;
 
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': currentApiKey,
+        },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
@@ -123,19 +158,20 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr || jsonStr === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const parts = parsed?.candidates?.[0]?.content?.parts || [];
-              const text = parts.map(part => part.text || '').join('');
-              if (text) {
-                fullText += text;
-                onChunk(text, fullText);
-              }
-            } catch { /* ignore malformed chunks */ }
+          const text = parseSseText(line);
+          if (text) {
+            fullText += text;
+            onChunk(text, fullText);
           }
+        }
+      }
+
+      buffer += decoder.decode();
+      for (const line of buffer.split('\n')) {
+        const text = parseSseText(line);
+        if (text) {
+          fullText += text;
+          onChunk(text, fullText);
         }
       }
 
@@ -148,7 +184,7 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
       onComplete(fullText);
     } catch (err) {
       if (err.name === 'AbortError') return; // request was cancelled
-      onError(err);
+      onError(toFriendlyError(err));
     }
   };
 
@@ -167,9 +203,46 @@ export function isApiKeyConfigured() {
 
 function shouldTryNextModel(error) {
   return error.status === 404
-    || error.status === 429
     || error.status >= 500
-    || /quota|rate limit|not found|unavailable|overloaded/i.test(error.message);
+    || /model.*not found|model.*unavailable|overloaded/i.test(error.message);
+}
+
+function parseSseText(line) {
+  const match = line.match(/^data:\s*(.+?)\r?$/);
+  if (!match || match[1] === '[DONE]') return '';
+
+  try {
+    const parsed = JSON.parse(match[1]);
+    const parts = parsed?.candidates?.[0]?.content?.parts || [];
+    return parts.map(part => part.text || '').join('');
+  } catch {
+    return '';
+  }
+}
+
+function toFriendlyError(error) {
+  const message = error?.message || '';
+  if (error?.status === 401 || error?.status === 403) {
+    return createError('Gemini rejected this API key. Check the key in Settings.', 'API_KEY_INVALID');
+  }
+  if (error?.status === 429 || /quota|rate limit/i.test(message)) {
+    return createError('Gemini rate limit reached. Wait a moment, then try again.', 'RATE_LIMITED');
+  }
+  if (error instanceof TypeError || /failed to fetch|network/i.test(message)) {
+    return createError('Could not reach Gemini. Check your internet connection and try again.', 'NETWORK_ERROR');
+  }
+  return error instanceof Error ? error : new Error('Gemini could not complete this analysis.');
+}
+
+function createError(message, code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+function getDesktopApiKeyStore() {
+  if (typeof window === 'undefined') return null;
+  return window.homoEconomicusDesktop?.apiKey || null;
 }
 
 function readStorage(key) {
