@@ -2,6 +2,8 @@
  * ProfileModal — Optional device-local display name.
  */
 
+import { trapModalFocus } from './modalFocus.js';
+
 export class ProfileModal {
   constructor({ getUser, onSave, onClear }) {
     this.getUser = getUser;
@@ -32,6 +34,7 @@ export class ProfileModal {
             id="profile-name"
             type="text"
             placeholder="Your name"
+            aria-label="Display name"
             autocomplete="name"
             maxlength="60"
             required
@@ -79,12 +82,13 @@ export class ProfileModal {
     input.value = user?.name || '';
     clearButton.hidden = !user;
     overlay.classList.add('modal-overlay--visible');
-    document.addEventListener('keydown', this.handleEscape);
+    this.releaseFocus = trapModalFocus(overlay, () => this.hide());
     window.setTimeout(() => input.focus(), 0);
   }
 
   hide() {
     document.getElementById('profile-overlay')?.classList.remove('modal-overlay--visible');
     document.removeEventListener('keydown', this.handleEscape);
+    this.releaseFocus?.();
   }
 }

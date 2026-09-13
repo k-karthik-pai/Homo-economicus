@@ -88,7 +88,7 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
   if (!currentApiKey) {
     const error = new Error('Gemini API key required. Add your key in Settings to start an analysis.');
     error.code = 'API_KEY_MISSING';
-    onError(error);
+    queueMicrotask(() => onError(error));
     return controller;
   }
 
@@ -112,6 +112,8 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
   const attempt = async (modelIndex = 0) => {
     const model = getModel(modelIndex);
     const url = `${API_BASE}/${model}:streamGenerateContent?alt=sse`;
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 120000);
 
     try {
       const response = await fetch(url, {
@@ -132,6 +134,7 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
 
         if (shouldTryNextModel(error)) {
           if (modelIndex + 1 < MODELS.length) {
+            clearTimeout(timeout);
             return attempt(modelIndex + 1); // fallback to next model
           }
         }
@@ -181,10 +184,13 @@ export function streamMessage(conversationHistory, onChunk, onComplete, onError)
         throw error;
       }
 
-      onComplete(fullText);
+      if (!controller.signal.aborted) onComplete(fullText);
     } catch (err) {
+      if (timedOut) { onError(new Error('Gemini timed out. Please try again.')); return; }
       if (err.name === 'AbortError') return; // request was cancelled
       onError(toFriendlyError(err));
+    } finally {
+      clearTimeout(timeout);
     }
   };
 
@@ -214,7 +220,7 @@ function parseSseText(line) {
   try {
     const parsed = JSON.parse(match[1]);
     const parts = parsed?.candidates?.[0]?.content?.parts || [];
-    return parts.map(part => part.text || '').join('');
+    return parts.filter(part => !part.thought).map(part => part.text || '').join('');
   } catch {
     return '';
   }
@@ -222,7 +228,7 @@ function parseSseText(line) {
 
 function toFriendlyError(error) {
   const message = error?.message || '';
-  if (error?.status === 401 || error?.status === 403) {
+  if (error?.status === 401 || error?.status === 403 || /API key not valid|API_KEY_INVALID/i.test(message)) {
     return createError('Gemini rejected this API key. Check the key in Settings.', 'API_KEY_INVALID');
   }
   if (error?.status === 429 || /quota|rate limit/i.test(message)) {
@@ -256,7 +262,7 @@ function readStorage(key) {
 function writeStorage(key, value) {
   try {
     localStorage.setItem(key, value);
-  } catch { /* storage unavailable */ }
+  } catch { throw new Error('Browser storage is unavailable. Enable site storage to save your key.'); }
 }
 
 function removeStorage(key) {

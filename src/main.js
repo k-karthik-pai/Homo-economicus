@@ -12,6 +12,8 @@ import './styles/chat.css';
 import './styles/modal.css';
 import './styles/animations.css';
 import './styles/responsive.css';
+import './styles/workspace.css';
+import { DecisionWorkspace, downloadText } from './components/DecisionWorkspace.js';
 
 import { ChatEngine } from './chat/ChatEngine.js';
 import {
@@ -32,6 +34,15 @@ import { ApiKeyModal } from './components/ApiKeyModal.js';
 
 // ---- Initialize Engine ----
 const chatEngine = new ChatEngine();
+const workspace = new DecisionWorkspace(content => {
+  if (!canChangeConversation()) return;
+  startNewChat();
+  const input = document.getElementById('chat-input');
+  input.value = content;
+  input.dispatchEvent(new Event('input'));
+  inputArea.focus();
+  if (!isApiKeyConfigured()) setStatusMessage('Connect your Gemini key, then send the prepared comparison.', 'neutral');
+});
 
 // ---- Initialize Components ----
 const sidebar = new Sidebar(chatEngine, {
@@ -59,7 +70,12 @@ const inputArea = new InputArea({
 });
 
 const welcomeScreen = new WelcomeScreen({
-  onExampleClick: (text) => sendMessage(text),
+  onExampleClick: (text) => {
+    const input = document.getElementById('chat-input');
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    inputArea.focus();
+  },
 });
 
 const profileModal = new ProfileModal({
@@ -93,6 +109,17 @@ function buildApp() {
   const main = document.createElement('main');
   main.className = 'main';
   main.id = 'main-area';
+  const toolbar = document.createElement('header');
+  toolbar.className = 'app-toolbar';
+  toolbar.innerHTML = `<nav class="view-tabs" aria-label="Workspace"><button id="view-compare" type="button" aria-pressed="true">Compare options</button><button id="view-chat" type="button" aria-pressed="false">AI advisor</button></nav><button id="export-chat" type="button" hidden>Export chat</button>`;
+  main.append(toolbar, workspace.render());
+  toolbar.querySelector('#view-compare').onclick = () => showView('compare');
+  toolbar.querySelector('#view-chat').onclick = () => showView('chat');
+  toolbar.querySelector('#export-chat').onclick = () => {
+    const conversation = chatEngine.getActiveConversation();
+    if (!conversation?.messages.length) { setStatusMessage('Start a conversation before exporting.', 'neutral'); return; }
+    downloadText(`# ${conversation.title}\n\n${conversation.messages.map(m => `## ${m.role === 'user' ? 'You' : 'Gemini'}${m.interrupted ? ' (incomplete)' : ''}\n\n${m.content}`).join('\n\n')}`, 'conversation.md');
+  };
 
   // Chat container
   const chatArea = document.createElement('div');
@@ -108,6 +135,7 @@ function buildApp() {
   status.className = 'app-status';
   status.id = 'app-status';
   status.hidden = true;
+  status.setAttribute('role', 'status');
   main.appendChild(status);
 
   main.appendChild(inputArea.render());
@@ -121,6 +149,7 @@ function buildApp() {
   sidebar.updateApiStatus();
   inputArea.setApiConfigured(isApiKeyConfigured());
   renderChatView();
+  showView('compare');
 
   // Focus input
   inputArea.focus();
@@ -130,6 +159,7 @@ function buildApp() {
 
 function startNewChat() {
   if (!canChangeConversation()) return;
+  showView('chat');
 
   const activeConversation = chatEngine.getActiveConversation();
   if (activeConversation?.messages.length === 0) {
@@ -146,14 +176,25 @@ function startNewChat() {
 }
 
 function switchToChat(id) {
-  if (id === chatEngine.activeConversationId) return;
   if (!canChangeConversation()) return;
+  showView('chat');
+  if (id === chatEngine.activeConversationId) return;
 
   chatEngine.switchConversation(id);
   clearStatusMessage();
   renderChatView();
   sidebar.updateHistory();
   inputArea.focus();
+}
+
+function showView(view) {
+  if (!canChangeConversation()) return;
+  workspace.element.hidden = view !== 'compare';
+  document.getElementById('chat-area').hidden = view !== 'chat';
+  document.getElementById('input-area').hidden = view !== 'chat';
+  document.getElementById('export-chat').hidden = view !== 'chat';
+  for (const name of ['compare', 'chat']) document.getElementById(`view-${name}`).setAttribute('aria-pressed', String(view === name));
+  clearStatusMessage();
 }
 
 function deleteChat(id) {
@@ -276,11 +317,10 @@ function sendMessage(content) {
 
   chatEngine.onStreamError = (error) => {
     removeTypingIndicator();
-    document.getElementById('streaming-message')?.remove();
+    renderChatView();
     inputArea.setStreaming(false);
     inputArea.focus();
     setStatusMessage(error.message, 'error');
-    console.error('Stream error:', error);
   };
 
   chatEngine.onStreamCancelled = (aiMsg) => {

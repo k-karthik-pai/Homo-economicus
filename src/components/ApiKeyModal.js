@@ -3,6 +3,7 @@ import {
   isApiKeyConfigured,
   saveApiKey,
 } from '../api/gemini.js';
+import { trapModalFocus } from './modalFocus.js';
 
 export class ApiKeyModal {
   constructor(onSave) {
@@ -103,7 +104,7 @@ export class ApiKeyModal {
       }
     });
 
-    document.addEventListener('keydown', this.handleEscape);
+    this.releaseFocus = trapModalFocus(this.overlay, () => this.close());
     window.setTimeout(() => input.focus(), 0);
   }
 
@@ -113,6 +114,7 @@ export class ApiKeyModal {
       this.overlay.classList.remove('modal-overlay--visible');
       setTimeout(() => this.overlay.remove(), 300); // match fade-out duration
       document.removeEventListener('keydown', this.handleEscape);
+      this.releaseFocus?.();
     }
   }
 

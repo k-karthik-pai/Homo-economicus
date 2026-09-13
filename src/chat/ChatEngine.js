@@ -60,7 +60,8 @@ export class ChatEngine {
   _loadUser() {
     try {
       const data = localStorage.getItem(USER_KEY);
-      if (data) this.user = JSON.parse(data);
+      const user = data ? JSON.parse(data) : null;
+      if (typeof user?.name === 'string' && user.name.trim()) this.user = { name: user.name.trim().slice(0, 60) };
     } catch { /* ignore */ }
   }
 
@@ -97,10 +98,11 @@ export class ChatEngine {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
-        parsed.forEach(conv => {
+        if (!Array.isArray(parsed)) return;
+        parsed.filter(conv => conv && typeof conv.id === 'string' && /^conv_[a-zA-Z0-9_-]+$/.test(conv.id) && typeof conv.title === 'string').forEach(conv => {
           this.conversations.set(conv.id, {
             ...conv,
-            messages: Array.isArray(conv.messages) ? conv.messages : [],
+            messages: Array.isArray(conv.messages) ? conv.messages.filter(m => m && ['user', 'ai'].includes(m.role) && typeof m.content === 'string').map(m => ({ ...m, theories: Array.isArray(m.theories) ? m.theories.filter(t => KNOWN_THEORIES.has(t)) : [] })) : [],
             updatedAt: conv.updatedAt || conv.createdAt || Date.now(),
           });
         });
@@ -253,11 +255,13 @@ export class ChatEngine {
       history,
       // onChunk
       (chunk, fullText) => {
+        if (this.streamingAiMessage !== aiMessage) return;
         aiMessage.content = fullText;
         this.onStreamChunk?.(chunk, fullText, aiMessage);
       },
       // onComplete
       (fullText) => {
+        if (this.streamingAiMessage !== aiMessage) return;
         // Parse theories from the response
         aiMessage.theories = this._parseTheories(fullText);
         // Clean the THEORIES_USED line from display content
@@ -271,6 +275,13 @@ export class ChatEngine {
       },
       // onError
       (error) => {
+        if (this.streamingAiMessage !== aiMessage) return;
+        if (aiMessage.content.trim()) {
+          aiMessage.content = this._cleanContent(aiMessage.content);
+          aiMessage.interrupted = true;
+          conversation.messages.push(aiMessage);
+          this._saveToStorage();
+        }
         this._clearStreamingState();
         this.onStreamError?.(error);
       }

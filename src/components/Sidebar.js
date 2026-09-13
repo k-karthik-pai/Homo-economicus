@@ -119,10 +119,8 @@ export class Sidebar {
 
     container.innerHTML = conversations.map(conv => `
       <div class="sidebar__history-item ${conv.id === activeId ? 'sidebar__history-item--active' : ''}"
-           data-id="${conv.id}" role="button" tabindex="0"
-           ${conv.id === activeId ? 'aria-current="true"' : ''}>
-        <span>💬</span>
-        <span style="flex:1; overflow:hidden; text-overflow:ellipsis;">${this._escapeHtml(conv.title)}</span>
+           data-id="${conv.id}">
+        <button class="sidebar__history-open" type="button" ${conv.id === activeId ? 'aria-current="true"' : ''}>${this._escapeHtml(conv.title)}</button>
         <button class="sidebar__history-item__delete" data-delete-id="${conv.id}" type="button" title="Delete" aria-label="Delete conversation">✕</button>
       </div>
     `).join('');
@@ -147,6 +145,7 @@ export class Sidebar {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.onDeleteChat(btn.dataset.deleteId);
+        this.close();
       });
     });
   }
